@@ -1,0 +1,11 @@
+# The block for the platform's deploy/compose.mcp.yml: beside mcp-filesystem, on the same volume of working
+# copies, read-only — this server reads documents and has no business writing them.
+  mcp-documents:
+    image: ${SWARM_IMAGES:-snail}/s3l-documents-mcp:${MCP_TAG:-latest}
+    pull_policy: ${MCP_PULL_POLICY:-never}
+    environment:
+      SNAIL_MCP_DOCUMENTS_PORT: 8823
+    volumes: [ "worker-workspaces:/workspaces:ro" ]
+    mem_limit: 512m
+    restart: unless-stopped
+    logging: *logging

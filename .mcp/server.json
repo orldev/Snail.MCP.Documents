@@ -1,0 +1,52 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.orldev/snail-mcp-documents",
+  "description": "MCP server that reads documents as Markdown: Word, Excel, PowerPoint, PDF text, HTML, CSV, JSON and text, in pieces with pages, sheets and slides marked, an outline and tables row by row.",
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "nuget",
+      "identifier": "Snail.MCP.Documents",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [],
+      "environmentVariables": [
+        {
+          "name": "SNAIL_MCP_DOCUMENTS_PORT",
+          "description": "Port to answer sessions on at /mcp; unset means the server is started as a program and speaks stdio to its parent.",
+          "isRequired": false,
+          "default": "0"
+        },
+        {
+          "name": "SNAIL_MCP_DOCUMENTS_ROOTS",
+          "description": "Folders a session that names none may read, as ROOTS__0, ROOTS__1 and so on; a session at an address names its own with ?root=.",
+          "isRequired": false
+        },
+        {
+          "name": "SNAIL_MCP_DOCUMENTS_MAX_FILE_BYTES",
+          "description": "Bytes past which a file is not opened at all, 1024 to 536870912.",
+          "isRequired": false,
+          "default": "52428800"
+        },
+        {
+          "name": "SNAIL_MCP_DOCUMENTS_MEMORY_MINUTES",
+          "description": "Minutes a document that was read is remembered so its next piece is served without reading it again, 0 to 120; 0 forgets at once.",
+          "isRequired": false,
+          "default": "10"
+        },
+        {
+          "name": "SNAIL_MCP_DOCUMENTS_MEMORY_DOCUMENTS",
+          "description": "Documents remembered at once, 1 to 128.",
+          "isRequired": false,
+          "default": "8"
+        }
+      ]
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/orldev/Snail.MCP.Documents",
+    "source": "github"
+  }
+}

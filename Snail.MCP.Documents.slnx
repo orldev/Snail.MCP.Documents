@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/Snail.MCP.Documents.csproj" />
+  <Project Path="tests/Snail.MCP.Documents.Tests.csproj" />
+</Solution>

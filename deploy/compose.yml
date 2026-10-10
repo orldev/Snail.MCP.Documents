@@ -1,0 +1,15 @@
+# The server alone on a developer's machine, reading the folders under ./workspaces.
+#
+#   docker compose -f deploy/compose.yml up --build
+#
+# Sessions open at http://localhost:8823/mcp?root=/workspaces/<folder>.
+name: snail-documents
+
+services:
+  mcp-documents:
+    build: ..
+    image: snail/s3l-documents-mcp:latest
+    ports: [ "127.0.0.1:8823:8823" ]
+    volumes: [ "../workspaces:/workspaces:ro" ]
+    mem_limit: 512m
+    restart: unless-stopped

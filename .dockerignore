@@ -1,0 +1,10 @@
+# The image is built from the server's sources; nothing else enters.
+**/bin
+**/obj
+.git
+.github
+.idea
+.vscode
+deploy
+tests
+**/.DS_Store
