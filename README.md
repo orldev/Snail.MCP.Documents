@@ -66,7 +66,16 @@ Without a port it speaks stdio to the process that started it and reads inside t
 
 ## Configuration
 
-Every setting is an environment variable under `SNAIL_MCP_DOCUMENTS_`; nothing else is read.
+The settings come from the settings file and from the environment variables under `SNAIL_MCP_DOCUMENTS_`, and a
+variable wins over the file; nothing else is read. The file is `$SNAIL_MCP_DOCUMENTS_CONFIG` when it is set, the only
+one read then, or else the first of these that exists: `./.s3l-mcp-documents.json`, `./s3l-mcp-documents.json`,
+`~/.config/s3l-mcp-documents/config.json`, `~/.s3l-mcp-documents.json`. A machine's settings belong in `~/.config/s3l-mcp-documents/config.json`
+(`chmod 600`), never in a launchd job or in a client's registration, which travel wherever they are copied. Its fields
+are the variables' names after the prefix, a double underscore nesting:
+
+```json
+{ "Roots": ["/path/to/folder"], "MemoryMinutes": 30 }
+```
 
 | Variable | Default | What it sets |
 | --- | --- | --- |

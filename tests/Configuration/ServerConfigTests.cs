@@ -27,9 +27,42 @@ public sealed class ServerConfigTests
     [Fact]
     public void Read_AnUnprefixedVariable_IsNotASettingOfThisServer()
     {
-        var settings = ServerConfigExtensions.Settings(new Dictionary<string, string> { ["PORT"] = "1" });
+        var settings = ServerConfigExtensions.Settings(null, new Dictionary<string, string> { ["PORT"] = "1" });
 
         Assert.Equal(0, ServerConfigExtensions.Read(settings).Port);
+    }
+
+    [Fact]
+    public void Read_ASettingsFile_LandsOnItsSettings()
+    {
+        using var folder = new Folder();
+        string file = folder.Write("config.json", """{ "Roots": ["/workspaces"], "MemoryMinutes": 30 }""");
+
+        var config = ServerConfigExtensions.Read(ServerConfigExtensions.Settings(file, Deployment.Variables()));
+
+        Assert.Equal(["/workspaces"], config.Roots);
+        Assert.Equal(30, config.MemoryMinutes);
+    }
+
+    /// <summary>A variable is what a deployment says for this one run, so it overrules the file a person keeps.</summary>
+    [Fact]
+    public void Read_AVariableAndTheSettingsFile_TheVariableWins()
+    {
+        using var folder = new Folder();
+        string file = folder.Write("config.json", """{ "MemoryMinutes": 30, "MemoryDocuments": 4 }""");
+
+        var config = ServerConfigExtensions.Read(ServerConfigExtensions.Settings(file, Deployment.Variables(("MEMORY_MINUTES", "5"))));
+
+        Assert.Equal(5, config.MemoryMinutes);
+        Assert.Equal(4, config.MemoryDocuments);
+    }
+
+    [Fact]
+    public void Read_ASettingsFileThatIsNotThere_LeavesTheDefaults()
+    {
+        var config = ServerConfigExtensions.Read(ServerConfigExtensions.Settings(Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json"), Deployment.Variables()));
+
+        Assert.Equal(new ServerConfig().MemoryMinutes, config.MemoryMinutes);
     }
 
     [Theory]

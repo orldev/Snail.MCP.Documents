@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Snail.MCP.Documents.Configuration;
 using Snail.MCP.Documents.Extensions;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Documents.Tests.Contracts;
 
@@ -25,7 +26,7 @@ public sealed partial class RegistryManifestContractTests
 
         Assert.All(typeof(ServerConfig).GetProperties(), setting =>
         {
-            string variable = $"{EnvironmentSettings.Prefix}{Screaming().Replace(setting.Name, "_$1").ToUpperInvariant()}";
+            string variable = $"{ServerSettings.PrefixOf(ServerConfigExtensions.Name)}{Screaming().Replace(setting.Name, "_$1").ToUpperInvariant()}";
             var named = Variables.SingleOrDefault(candidate => candidate["name"]!.GetValue<string>() == variable);
 
             Assert.True(named is not null, variable);

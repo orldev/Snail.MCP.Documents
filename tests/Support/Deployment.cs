@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Snail.MCP.Documents.Configuration;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Documents.Tests.Support;
 
@@ -7,8 +8,8 @@ namespace Snail.MCP.Documents.Tests.Support;
 internal static class Deployment
 {
     public static Dictionary<string, string> Variables(params (string Name, string Value)[] own) =>
-        own.ToDictionary(variable => $"{EnvironmentSettings.Prefix}{variable.Name}", variable => variable.Value);
+        own.ToDictionary(variable => $"{ServerSettings.PrefixOf(ServerConfigExtensions.Name)}{variable.Name}", variable => variable.Value);
 
     public static IConfiguration Settings(params (string Name, string Value)[] own) =>
-        ServerConfigExtensions.Settings(Variables(own));
+        ServerConfigExtensions.Settings(null, Variables(own));
 }

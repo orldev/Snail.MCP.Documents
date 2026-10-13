@@ -1,19 +1,27 @@
+using System.Collections;
 using Microsoft.Extensions.Configuration;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Documents.Configuration;
 
-/// <summary>Builds the settings the server runs on from the environment alone.</summary>
+/// <summary>Builds the settings the server runs on from its settings file and its variables.</summary>
 public static class ServerConfigExtensions
 {
-    /// <summary>Everything configured for this server.</summary>
+    /// <summary>The server's short name: its settings file is <c>~/.config/s3l-mcp-documents/config.json</c>, its variables begin with <c>SNAIL_MCP_DOCUMENTS_</c>.</summary>
+    public const string Name = "documents";
+
+    /// <summary>Everything configured for this server: the first settings file of Snail.Sdk's chain, then the variables, which win.</summary>
     /// <remarks>
     /// Built apart from the host's own configuration on purpose: an <c>appsettings.json</c> lying in the
     /// working directory of whoever started the server, or an unprefixed variable of theirs, is not a
     /// setting of this server and must not become one by accident.
     /// </remarks>
-    public static IConfiguration Settings(System.Collections.IDictionary? variables = null) =>
+    public static IConfiguration Settings() => Settings(ServerSettings.FileOf(Name), Environment.GetEnvironmentVariables());
+
+    /// <summary>The settings of <paramref name="file"/>, when there is one, under the server's variables among <paramref name="variables"/>.</summary>
+    public static IConfiguration Settings(string? file, IDictionary variables) =>
         new ConfigurationBuilder()
-            .AddInMemoryCollection(EnvironmentSettings.Read(variables ?? Environment.GetEnvironmentVariables()))
+            .AddServerSettings(Name, file, variables)
             .Build();
 
     /// <summary>What the settings say the server is, read before there is a host to read it into.</summary>

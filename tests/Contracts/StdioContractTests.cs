@@ -93,7 +93,7 @@ public sealed class StdioContractTests : IDisposable
         {
             Command = command,
             Arguments = arguments,
-            EnvironmentVariables = Deployment.Variables(("ROOTS__0", _copy.Root)).ToDictionary(variable => variable.Key, variable => (string?)variable.Value)
+            EnvironmentVariables = Deployment.Variables(("ROOTS__0", _copy.Root), ("CONFIG", ServerProgram.NoSettingsFile)).ToDictionary(variable => variable.Key, variable => (string?)variable.Value)
         }));
     }
 }

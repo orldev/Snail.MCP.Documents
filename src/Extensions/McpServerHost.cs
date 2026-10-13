@@ -36,6 +36,7 @@ public static class McpServerHost
     {
         var builder = WebApplication.CreateSlimBuilder(args);
 
+        builder.Configuration.AddConfiguration(settings);
         builder.ConfigureMcpServerAtAnAddress(config, settings);
 
         var app = builder.Build();
