@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Snail.MCP.Documents.Configuration;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Documents.Extensions;
 
@@ -24,21 +25,12 @@ public static class McpServerRegistrationExtensions
         /// <summary>Configures the server to speak stdio to the process that started it.</summary>
         public IHostApplicationBuilder ConfigureMcpServerAsAProgram(ServerConfig config, IConfiguration settings)
         {
-            builder.UseStderrLogging();
+            builder.Logging.UseStderr();
 
             builder.Services
                 .AddSingleton(config)
                 .AddReading(settings)
                 .AddMcpTransportAsAProgram();
-
-            return builder;
-        }
-
-        /// <summary>stdio carries JSON-RPC, so every log line must go to stderr.</summary>
-        internal IHostApplicationBuilder UseStderrLogging()
-        {
-            builder.Logging.ClearProviders();
-            builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
 
             return builder;
         }

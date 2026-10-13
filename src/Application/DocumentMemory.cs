@@ -39,12 +39,9 @@ public sealed class DocumentMemory(ServerConfig config, TimeProvider clock)
 
     private void Forget()
     {
-        var kept = _documents
-            .Where(entry => IsFresh(entry.Value))
-            .OrderByDescending(entry => entry.Value.ReadAt)
-            .Take(config.MemoryDocuments)
-            .Select(entry => entry.Key)
-            .ToHashSet(StringComparer.Ordinal);
+        var fresh = _documents.Where(entry => IsFresh(entry.Value));
+        var newest = fresh.OrderByDescending(entry => entry.Value.ReadAt).Take(config.MemoryDocuments);
+        var kept = newest.Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
 
         foreach (string path in _documents.Keys.Where(path => !kept.Contains(path)))
             _documents.TryRemove(path, out _);

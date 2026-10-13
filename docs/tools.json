@@ -1,0 +1,8 @@
+{
+  "intro": [
+    "Reads the documents of a working copy as Markdown: Word, Excel, PowerPoint, the text layer of a PDF, saved web pages, CSV, JSON, Markdown and plain text. Three questions kept apart: what does this document hold (`documents_outline`), what does it say (`documents_read`, a piece at a time), and what does this table hold (`documents_table`, row by row). It only reads, and only inside the folder a session names."
+  ],
+  "families": [
+    { "type": "DocumentTools", "slug": "documents", "title": "Documents: outline, read, table" }
+  ]
+}

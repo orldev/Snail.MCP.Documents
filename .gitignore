@@ -14,3 +14,9 @@ artifacts/
 *.user
 *.suo
 *.DotSettings.user
+
+# The operating system.
+.DS_Store
+
+# BenchmarkDotNet results; the accepted run is kept in benchmarks/baseline/.
+BenchmarkDotNet.Artifacts/

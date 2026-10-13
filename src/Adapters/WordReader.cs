@@ -100,11 +100,13 @@ public sealed partial class WordReader : IFormatReader
     }
 
     private static IReadOnlyList<IReadOnlyList<string>> Rows(W.Table table) =>
-    [
-        .. table.Elements<W.TableRow>()
-            .Select(row => (IReadOnlyList<string>)[.. row.Elements<W.TableCell>().Select(cell => string.Join(' ', cell.Elements<W.Paragraph>().Select(Text).Where(line => line.Length > 0)))])
-            .Where(row => row.Count > 0)
-    ];
+        [.. table.Elements<W.TableRow>().Select(Cells).Where(row => row.Count > 0)];
+
+    private static IReadOnlyList<string> Cells(W.TableRow row) =>
+        [.. row.Elements<W.TableCell>().Select(CellText)];
+
+    private static string CellText(W.TableCell cell) =>
+        string.Join(' ', cell.Elements<W.Paragraph>().Select(Text).Where(line => line.Length > 0));
 
     /// <summary>The heading level of every style that is a heading, by style id.</summary>
     private static IReadOnlyDictionary<string, int> HeadingLevels(StyleDefinitionsPart? styles)

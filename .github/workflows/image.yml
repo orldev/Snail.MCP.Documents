@@ -1,0 +1,18 @@
+name: container image
+
+# The server as a container (Dockerfile), through the shared image workflow of Snail.Sdk: built on every push and pull
+# request, as neither the solution nor the tests build the Dockerfile, and pushed to the registry as
+# ghcr.io/<owner>/s3l-documents-mcp only from a v* tag, with the version, latest and the commit.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    permissions: { contents: read, packages: write }
+    uses: orldev/Snail.Sdk/.github/workflows/mcp-image.yml@v1

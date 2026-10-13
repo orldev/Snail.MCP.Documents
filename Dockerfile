@@ -7,14 +7,20 @@
 # are: they are mounted here read-only, and each session names the one it reads through its address —
 # …/mcp?root=/workspaces/<task>. A session naming a copy this container cannot see is refused at the door
 # rather than answered about the wrong folder.
-
-# Pinned to the band global.json asks for: on the floating tag a newer feature band refuses the build.
+#
+# The SDK is pinned to the band global.json asks for: on the floating sdk:10.0 a newer feature band would one day
+# refuse the build. The server is native: published for linux-x64 the SDK compiles it ahead of time (Native AOT), which
+# needs clang and zlib in the build stage, and the image runs the one executable on runtime-deps, with no .NET runtime
+# in it — a smaller image and a faster start.
 FROM mcr.microsoft.com/dotnet/sdk:10.0.302 AS build
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends clang zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /source
 COPY . .
-RUN dotnet publish src/Snail.MCP.Documents.csproj -c Release -o /app --self-contained false -p:UseAppHost=false
+RUN dotnet publish src/Snail.MCP.Documents.csproj -c Release -r linux-x64 -o /app
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.11
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
 WORKDIR /app
 COPY --from=build /app .
 
@@ -36,4 +42,4 @@ LABEL mcp.name="documents" \
       mcp.description="Read the documents of the working copy as Markdown: Word, Excel, PowerPoint, the text of a PDF, HTML, CSV, JSON and text, in pieces, with an outline and tables row by row." \
       mcp.requires="The volume of the machine's working copies mounted at /workspaces, read-only."
 
-ENTRYPOINT ["dotnet", "Snail.MCP.Documents.dll"]
+ENTRYPOINT ["/app/Snail.MCP.Documents"]

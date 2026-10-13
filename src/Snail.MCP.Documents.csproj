@@ -1,43 +1,32 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Snail.Sdk.Mcp">
 
+    <!--
+        Native, as Snail.MCP.CleanUp: OpenXml, PdfPig and AngleSharp publish without a trim or AOT warning, and every
+        format is read over stdio and over HTTP by the native program. A platform tool per system, a portable one for
+        the rest; on this Mac `dotnet publish src -c Release -r osx-arm64 -p:SnailMcpInstall=true`. The container is native
+        too: its Dockerfile publishes for linux-x64.
+    -->
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
-        <LangVersion>latest</LangVersion>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <InvariantGlobalization>true</InvariantGlobalization>
-        <RollForward>LatestMajor</RollForward>
+        <SnailMcpTransport>Both</SnailMcpTransport>
+        <SnailMcpContainer>true</SnailMcpContainer>
+        <DebugType Condition="'$(PublishAot)' == 'true' and '$(Configuration)' == 'Release'">none</DebugType>
     </PropertyGroup>
 
     <PropertyGroup>
-        <PackAsTool>true</PackAsTool>
-        <ToolCommandName>snail-mcp-documents</ToolCommandName>
-        <PackageType>McpServer</PackageType>
-        <PackageId>Snail.MCP.Documents</PackageId>
         <Version>0.1.0</Version>
-        <Authors>orldev</Authors>
         <Description>MCP server that lets AI agents read the documents of a task as Markdown: Word, Excel, PowerPoint, the text of a PDF, HTML, CSV, JSON and plain text, in pieces with their pages, sheets and slides marked, an outline to find a place by, and tables row by row. Reads only, inside the folder a session names.</Description>
         <PackageTags>mcp;mcp-server;modelcontextprotocol;ai;claude;documents;docx;xlsx;pptx;pdf;markdown;dotnet-tool</PackageTags>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/orldev/Snail.MCP.Documents</PackageProjectUrl>
         <RepositoryUrl>https://github.com/orldev/Snail.MCP.Documents</RepositoryUrl>
-        <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="..\README.md" Pack="true" PackagePath="/" Visible="false"/>
-        <None Include="..\.mcp\server.json" Pack="true" PackagePath="/.mcp/" Visible="false"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="AngleSharp" Version="1.8.4"/>
-        <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1"/>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11"/>
-        <PackageReference Include="ModelContextProtocol" Version="2.2.0"/>
-        <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0"/>
-        <PackageReference Include="PdfPig" Version="0.1.16"/>
+        <PackageReference Include="AngleSharp"/>
+        <PackageReference Include="DocumentFormat.OpenXml"/>
+        <PackageReference Include="ModelContextProtocol"/>
+        <PackageReference Include="ModelContextProtocol.AspNetCore"/>
+        <PackageReference Include="PdfPig"/>
     </ItemGroup>
 
     <ItemGroup>

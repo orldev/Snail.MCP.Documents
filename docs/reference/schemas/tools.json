@@ -1,0 +1,101 @@
+[
+  {
+    "name": "documents_read",
+    "description": "Read a document as Markdown: Word, Excel, PowerPoint, PDF, HTML, CSV, JSON, Markdown or plain text. Headings,\nlists and tables keep their shape, and each page, sheet and slide begins with a marked heading. A long\ntext comes in pieces: next is the position to pass as from for the following piece, and null when the\ndocument has ended. To start at a page, sheet or slide, pass its number as part instead of from. A PDF\npage with no text layer is listed under scans: its words are not in the text.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "description": "The file, relative to the working copy; attachments are under .swarm/attachments.",
+          "type": "string"
+        },
+        "from": {
+          "description": "Position in the text to start at: 0 by default, or the next of the previous piece.",
+          "type": "integer",
+          "default": 0
+        },
+        "part": {
+          "description": "Number of the page, sheet or slide to start at, as documents_outline lists them; when given, from is ignored.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "maxCharacters": {
+          "description": "Characters of text to return, 500 to 100000; 20000 by default.",
+          "type": "integer",
+          "default": 20000
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "skill": null
+  },
+  {
+    "name": "documents_outline",
+    "description": "Say what a document holds without reading it: its format and length, its pages, sheets or slides with\ntheir titles, its headings, its tables with their size, and which PDF pages are scans. Each part and\nheading carries the position to pass to documents_read as from, and each table the number to pass to\ndocuments_table.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "description": "The file, relative to the working copy.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "skill": null
+  },
+  {
+    "name": "documents_table",
+    "description": "Read one table of a document as rows of cells: a sheet of a workbook, a table of a Word or HTML page,\nof a slide or of a Markdown file, or the whole of a CSV. The first row is the header as the document\nhas it. A long table comes in pages of rows: next is the row to pass as fromRow, and null when the\ntable has ended.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "description": "The file, relative to the working copy.",
+          "type": "string"
+        },
+        "table": {
+          "description": "Number of the table as documents_outline lists it; 1 by default.",
+          "type": "integer",
+          "default": 1
+        },
+        "fromRow": {
+          "description": "Row to start at, counting the header as 0: 0 by default, or the next of the previous page.",
+          "type": "integer",
+          "default": 0
+        },
+        "maxRows": {
+          "description": "Rows to return, 1 to 1000; 100 by default.",
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "skill": null
+  }
+]

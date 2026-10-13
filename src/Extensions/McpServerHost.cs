@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Snail.MCP.Documents.Configuration;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Documents.Extensions;
 
@@ -49,7 +50,7 @@ public static class McpServerHost
 
     private static IHost Spoken(string[] args, ServerConfig config, IConfiguration settings)
     {
-        var builder = Host.CreateApplicationBuilder(args);
+        var builder = McpHost.CreateBuilder(args);
 
         builder.ConfigureMcpServerAsAProgram(config, settings);
 

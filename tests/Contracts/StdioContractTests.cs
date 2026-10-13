@@ -1,6 +1,6 @@
 using ModelContextProtocol.Client;
-using Snail.MCP.Documents.Configuration;
 using Snail.MCP.Documents.Tools.Prompts;
+using Snail.Sdk.Mcp.Testing;
 
 namespace Snail.MCP.Documents.Tests.Contracts;
 
@@ -13,8 +13,6 @@ public sealed class StdioContractTests : IDisposable
 {
     private readonly Folder _copy = new();
 
-    private static string Server => Path.Combine(AppContext.BaseDirectory, "Snail.MCP.Documents.dll");
-
     public void Dispose() => _copy.Dispose();
 
     [Fact]
@@ -24,9 +22,23 @@ public sealed class StdioContractTests : IDisposable
 
         var listed = await client.ListToolsAsync();
 
-        Assert.Equal(ThisAssembly.Name, client.ServerInfo.Name);
+        Assert.Equal("s3l-mcp-documents", client.ServerInfo.Name);
         Assert.Equal(ServerGuidance.Instructions, client.ServerInstructions);
         Assert.Equal(Catalog.Names, [.. listed.Select(tool => tool.Name).Order(StringComparer.Ordinal)]);
+    }
+
+    /// <summary>
+    /// The guard rules of every Snail server, on the list a model receives: names in snake case and listed once, the tool
+    /// and every parameter described, read-only or destructive stated, every allowed value named, English.
+    /// </summary>
+    [Fact]
+    public async Task Tools_AsListed_KeepTheGuardRules()
+    {
+        await using var client = await StartedAsync();
+
+        var listed = await client.ListToolsAsync();
+
+        Assert.Empty(ToolGuards.Problems(listed.Select(tool => tool.ProtocolTool)));
     }
 
     [Fact]
@@ -41,11 +53,47 @@ public sealed class StdioContractTests : IDisposable
         Assert.Equal("# Заголовок\n\nтекст", answer.Data()["text"]!.GetValue<string>());
     }
 
-    private Task<McpClient> StartedAsync() =>
-        McpClient.CreateAsync(new StdioClientTransport(new StdioClientTransportOptions
+    /// <summary>Every format through the program itself: a native build fails at the call that needs a type it was not given.</summary>
+    [Theory]
+    [InlineData("report.docx")]
+    [InlineData("book.xlsx")]
+    [InlineData("deck.pptx")]
+    [InlineData("scan.pdf")]
+    [InlineData("rows.csv")]
+    public async Task EveryFormat_AsAProgram_IsAnsweredByEveryTool(string name)
+    {
+        _copy.Write(name, Path.GetExtension(name) switch
         {
-            Command = "dotnet",
-            Arguments = [Server],
+            ".docx" => Samples.Word(),
+            ".xlsx" => Samples.Excel(),
+            ".pptx" => Samples.Slides(),
+            ".pdf" => Samples.Pdf(),
+            _ => Samples.Csv()
+        });
+        await using var client = await StartedAsync();
+
+        foreach (var tool in new[] { "documents_read", "documents_outline", "documents_table" })
+        {
+            var answer = await client.CallToolAsync(tool, new Dictionary<string, object?> { ["path"] = name });
+
+            Assert.NotEmpty(answer.Content);
+        }
+
+        var read = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = name });
+
+        Assert.NotEqual(true, read.IsError);
+        Assert.False(string.IsNullOrWhiteSpace(read.Data()["text"]?.GetValue<string>()), name);
+    }
+
+    private Task<McpClient> StartedAsync()
+    {
+        var (command, arguments) = ServerProgram.Command("Snail.MCP.Documents", "SNAIL_DOCUMENTS_SERVER");
+
+        return McpClient.CreateAsync(new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Command = command,
+            Arguments = arguments,
             EnvironmentVariables = Deployment.Variables(("ROOTS__0", _copy.Root)).ToDictionary(variable => variable.Key, variable => (string?)variable.Value)
         }));
+    }
 }

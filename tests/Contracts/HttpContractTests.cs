@@ -1,5 +1,5 @@
-using Snail.MCP.Documents.Configuration;
 using Snail.MCP.Documents.Tools.Prompts;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Documents.Tests.Contracts;
 
@@ -24,7 +24,7 @@ public sealed class HttpContractTests : IDisposable
 
         var listed = await client.ListToolsAsync();
 
-        Assert.Equal(ThisAssembly.Version, client.ServerInfo.Version);
+        Assert.Equal(ServerIdentity.VersionOf(typeof(ServerGuidance).Assembly), client.ServerInfo.Version);
         Assert.Equal(ServerGuidance.Instructions, client.ServerInstructions);
         Assert.Equal(Catalog.Names, [.. listed.Select(tool => tool.Name).Order(StringComparer.Ordinal)]);
     }
