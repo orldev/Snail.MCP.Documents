@@ -3,9 +3,10 @@ namespace Snail.MCP.Documents.Application;
 /// <summary>Which tools this session may use, read from the address it opened.</summary>
 /// <remarks>
 /// The platform gives a role a list of tools and appends it to the address as <c>&amp;tool=…</c>, once per
-/// tool. It is fixed when the session opens, the model cannot reach it, and it is checked where calls
-/// arrive rather than inside each tool. A session that names no tool may use them all, which is what a
-/// server started as a program for one caller has always been.
+/// tool. The server keeps no session state, so the grant is read from the address of every request: it holds
+/// because the platform writes that address and the model cannot reach it, not because anything here pins it to
+/// a session. It is checked where calls arrive rather than inside each tool. A session that names no tool may
+/// use them all, which is what a server started as a program for one caller has always been.
 /// </remarks>
 public sealed class SessionGrant(ISessionAddress address)
 {

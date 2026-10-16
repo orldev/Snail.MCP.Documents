@@ -59,14 +59,26 @@ public sealed class SessionRootsTests : IDisposable
         Assert.Contains("there is no file", reached.Error, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("  ")]
+    public void Reach_NoPathAtAll_AsksForAFileAndSaysWhereFrom(string? path)
+    {
+        var reached = Roots().Reach(path);
+
+        Assert.False(reached.IsAllowed);
+        Assert.Equal("name a file", reached.Error);
+        Assert.Contains(_copy.Root, reached.Hint, StringComparison.Ordinal);
+    }
+
     /// <summary>A server with no roots at all reads nothing, rather than the whole disk.</summary>
     [Fact]
     public void Reach_WithNoRootAnywhere_ReadsNothing()
     {
-        var reached = new SessionRoots(new ServerConfig(), new StdioAddress()).Reach("/etc/hosts");
+        var reached = new SessionRoots(new ServerConfig(), new StdioAddress(), new LocalDisk()).Reach("/etc/hosts");
 
         Assert.False(reached.IsAllowed);
     }
 
-    private SessionRoots Roots() => new(new ServerConfig { Roots = [_copy.Root] }, new StdioAddress());
+    private SessionRoots Roots() => new(new ServerConfig { Roots = [_copy.Root] }, new StdioAddress(), new LocalDisk());
 }

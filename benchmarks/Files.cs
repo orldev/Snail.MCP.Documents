@@ -1,6 +1,9 @@
 using System.Globalization;
+using System.Text;
 using DocumentFormat.OpenXml.Packaging;
 using S = DocumentFormat.OpenXml.Spreadsheet;
+using UglyToad.PdfPig.Fonts.Standard14Fonts;
+using UglyToad.PdfPig.Writer;
 using W = DocumentFormat.OpenXml.Wordprocessing;
 
 namespace Snail.MCP.Documents.Benchmarks;
@@ -100,6 +103,116 @@ public static class Files
 
         return stream.ToArray();
     }
+
+    /// <summary>A saved web page of twenty sections inside the nested containers a site builder writes: headings, paragraphs, a list and a table each.</summary>
+    public static byte[] Page()
+    {
+        var page = new StringBuilder("<html><head><title>Weekly report</title><style>p{}</style></head><body><nav><a href=\"/\">Home</a></nav>");
+
+        for (int section = 1; section <= 20; section++)
+        {
+            page.Append("<div class=\"row\"><div class=\"col\"><div class=\"card\"><div class=\"body\">");
+            page.Append($"<h2>Section {section}: what the week brought</h2>");
+
+            for (int paragraph = 1; paragraph <= 8; paragraph++)
+                page.Append($"<p>Paragraph {paragraph} of section {section}: the work went <b>as planned</b>, the numbers below say how far.</p>");
+
+            page.Append("<ul><li>first point<ul><li>a detail</li></ul></li><li>second point</li></ul>");
+            page.Append("<table><tr><th>Month</th><th>Planned</th><th>Done</th></tr>");
+
+            for (int row = 1; row <= 12; row++)
+                page.Append($"<tr><td>Month {row}</td><td>{row * 100}</td><td>{row * 97}</td></tr>");
+
+            page.Append("</table></div></div></div></div>");
+        }
+
+        return Encoding.UTF8.GetBytes(page.Append("<script>track()</script></body></html>").ToString());
+    }
+
+    /// <summary>Notes in Markdown of twenty sections: a heading, paragraphs, a list, a table and a fenced block each.</summary>
+    public static byte[] Notes()
+    {
+        var notes = new StringBuilder();
+
+        for (int section = 1; section <= 20; section++)
+        {
+            notes.Append($"## Section {section}\n\n");
+
+            for (int paragraph = 1; paragraph <= 8; paragraph++)
+                notes.Append($"Paragraph {paragraph} of section {section}: the work went as planned, and the numbers say how far.\n\n");
+
+            notes.Append("- first point\n  - a detail\n- second point\n\n| Month | Planned | Done |\n|---|---|---|\n");
+
+            for (int row = 1; row <= 12; row++)
+                notes.Append($"| Month {row} | {row * 100} | {row * 97} |\n");
+
+            notes.Append("\n```cs\nvar total = rows.Sum();\n```\n\n");
+        }
+
+        return Encoding.UTF8.GetBytes(notes.ToString());
+    }
+
+    /// <summary>An export of two thousand rows and five columns, semicolons and quoted cells, as a Russian Excel saves one.</summary>
+    public static byte[] Export()
+    {
+        var export = new StringBuilder("Date;Account;Amount;Note;Owner\n");
+
+        for (int row = 1; row <= 2_000; row++)
+            export.Append($"2026-10-{row % 28 + 1:00};account {row % 17};{row * 1.1:0.00};\"note; with a separator\";owner {row % 5}\n");
+
+        return Encoding.UTF8.GetBytes(export.ToString());
+    }
+
+    /// <summary>A JSON export of a thousand flat records of six fields.</summary>
+    public static byte[] Records()
+    {
+        var records = Enumerable.Range(1, 1_000).Select(row => $$"""{"date":"2026-10-{{row % 28 + 1:00}}","account":"account {{row % 17}}","amount":{{row * 3}},"rate":0.25,"closed":{{(row % 2 == 0 ? "true" : "false")}},"note":null}""");
+
+        return Encoding.UTF8.GetBytes($"[{string.Join(',', records)}]");
+    }
+
+    /// <summary>A PDF of twenty pages of text, forty lines each.</summary>
+    public static byte[] Pages()
+    {
+        var builder = new PdfDocumentBuilder();
+        var font = builder.AddStandard14Font(Standard14Font.Helvetica);
+
+        for (int number = 1; number <= 20; number++)
+        {
+            var page = builder.AddPage(UglyToad.PdfPig.Content.PageSize.A4);
+
+            for (int line = 0; line < 40; line++)
+                page.AddText($"Page {number}, line {line}: the work went as planned.", 10, new UglyToad.PdfPig.Core.PdfPoint(50, 800 - (line * 18)), font);
+        }
+
+        return builder.Build();
+    }
+
+    /// <summary>A workbook of two thousand rows that each hold one cell at XFD, the last column: eleven kilobytes on disk.</summary>
+    public static byte[] Sparse()
+    {
+        using var stream = new MemoryStream();
+
+        using (var book = SpreadsheetDocument.Create(stream, DocumentFormat.OpenXml.SpreadsheetDocumentType.Workbook))
+        {
+            var workbook = book.AddWorkbookPart();
+            workbook.Workbook = new S.Workbook();
+            var data = new S.SheetData();
+
+            for (uint row = 1; row <= 2_000; row++)
+                data.Append(new S.Row(Number(row == 1 ? $"A{row}" : $"XFD{row}", "1")) { RowIndex = row });
+
+            var part = workbook.AddNewPart<WorksheetPart>();
+            part.Worksheet = new S.Worksheet(data);
+            workbook.Workbook.AppendChild(new S.Sheets(new S.Sheet { Id = workbook.GetIdOfPart(part), SheetId = 1, Name = "Sheet 1" }));
+        }
+
+        return stream.ToArray();
+    }
+
+    /// <summary>Two thousand JSON records that each name a key of their own: twenty-three kilobytes on disk.</summary>
+    public static byte[] Keys() =>
+        Encoding.UTF8.GetBytes($"[{string.Join(',', Enumerable.Range(0, 2_000).Select(index => $$"""{"k{{index}}":1}"""))}]");
 
     private static W.Paragraph Paragraph(string text, W.ParagraphProperties? properties = null) =>
         properties is null

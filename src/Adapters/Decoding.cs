@@ -16,9 +16,7 @@ internal static class Decoding
 
     public static string Text(Stream content)
     {
-        using var buffer = new MemoryStream();
-        content.CopyTo(buffer);
-        byte[] bytes = buffer.ToArray();
+        var bytes = Bytes(content);
 
         if (Marked(bytes) is { } marked)
             return marked;
@@ -33,14 +31,26 @@ internal static class Decoding
         }
     }
 
-    private static string? Marked(byte[] bytes)
+    /// <summary>The bytes of the stream from where it stands, without a copy when they are already in memory.</summary>
+    private static ArraySegment<byte> Bytes(Stream content)
+    {
+        if (content is MemoryStream memory && memory.TryGetBuffer(out var buffer))
+            return buffer[(int)memory.Position..];
+
+        using var copy = new MemoryStream();
+        content.CopyTo(copy);
+
+        return copy.ToArray();
+    }
+
+    private static string? Marked(ReadOnlySpan<byte> bytes)
     {
         if (bytes is [0xEF, 0xBB, 0xBF, ..])
-            return Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
+            return Encoding.UTF8.GetString(bytes[3..]);
 
         if (bytes is [0xFF, 0xFE, ..])
-            return Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
+            return Encoding.Unicode.GetString(bytes[2..]);
 
-        return bytes is [0xFE, 0xFF, ..] ? Encoding.BigEndianUnicode.GetString(bytes, 2, bytes.Length - 2) : null;
+        return bytes is [0xFE, 0xFF, ..] ? Encoding.BigEndianUnicode.GetString(bytes[2..]) : null;
     }
 }

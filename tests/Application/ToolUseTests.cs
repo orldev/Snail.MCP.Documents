@@ -72,6 +72,46 @@ public sealed class ToolUseTests : IDisposable
     }
 
     [Fact]
+    public async Task Read_PartZero_IsRefusedWithTheRange()
+    {
+        _copy.Write("book.xlsx", Samples.Excel());
+        using var reading = new Reading(_copy.Root);
+
+        var refused = await reading.Documents.ReadAsync("book.xlsx", 0, 0, Limits.DefaultCharacters);
+
+        Assert.Equal("part must be between 1 and 2147483647, not 0", refused.Error);
+    }
+
+    /// <summary>A position past the end says how long the text is, so the next call can be a right one.</summary>
+    [Fact]
+    public async Task Read_FromPastTheEnd_SaysHowLongTheTextIs()
+    {
+        _copy.Write("a.txt", "текст");
+        using var reading = new Reading(_copy.Root);
+
+        var refused = await reading.Documents.ReadAsync("a.txt", 100, null, Limits.DefaultCharacters);
+
+        Assert.Equal("from 100 is past the end of the text, which has 5 characters", refused.Error);
+    }
+
+    /// <summary>A piece that ended between the halves of an emoji would hand the model a broken character at each end.</summary>
+    [Fact]
+    public async Task Read_PieceEndingInsideAnEmoji_EndsBeforeItAndTheNextStartsWithIt()
+    {
+        string whole = $"{new string('а', Limits.FewestCharacters - 1)}😀конец";
+        _copy.Write("emoji.txt", whole);
+        using var reading = new Reading(_copy.Root);
+
+        var first = (await reading.Documents.ReadAsync("emoji.txt", 0, null, Limits.FewestCharacters)).Data!;
+        int next = first["next"]!.GetValue<int>();
+        var second = (await reading.Documents.ReadAsync("emoji.txt", next, null, Limits.FewestCharacters)).Data!;
+
+        Assert.Equal(Limits.FewestCharacters - 1, next);
+        Assert.StartsWith("😀", second["text"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.Equal(whole, $"{first["text"]}{second["text"]}");
+    }
+
+    [Fact]
     public async Task Read_AFileOverTheSizeLimit_IsRefusedBeforeItIsOpened()
     {
         _copy.Write("big.txt", new string('x', 4_096));
@@ -144,6 +184,41 @@ public sealed class ToolUseTests : IDisposable
         var refused = await reading.Tables.ReadAsync("a.txt", 1, 0, Limits.DefaultRows);
 
         Assert.Equal("this document holds no table", refused.Error);
+    }
+
+    [Theory]
+    [InlineData(0, 0, Limits.DefaultRows, "table must be between 1 and 2147483647, not 0")]
+    [InlineData(1, -1, Limits.DefaultRows, "fromRow must be between 0 and 2147483647, not -1")]
+    [InlineData(1, 0, Limits.MostRows + 1, "maxRows must be between 1 and 1000, not 1001")]
+    public async Task Table_ANumberOutsideItsRange_IsRefusedWithTheRange(int table, int fromRow, int maxRows, string error)
+    {
+        _copy.Write("data.csv", "a,b\n1,2");
+        using var reading = new Reading(_copy.Root);
+
+        var refused = await reading.Tables.ReadAsync("data.csv", table, fromRow, maxRows);
+
+        Assert.Equal(error, refused.Error);
+    }
+
+    [Fact]
+    public async Task Table_FromARowPastTheEnd_SaysHowManyRowsThereAre()
+    {
+        _copy.Write("data.csv", "a,b\n1,2\n3,4");
+        using var reading = new Reading(_copy.Root);
+
+        var refused = await reading.Tables.ReadAsync("data.csv", 1, 50, Limits.DefaultRows);
+
+        Assert.Equal("row 50 is past the end of the table, which has 3 rows", refused.Error);
+    }
+
+    [Fact]
+    public async Task Table_OfAFileThatIsNotThere_SaysThereIsNoSuchFile()
+    {
+        using var reading = new Reading(_copy.Root);
+
+        var refused = await reading.Tables.ReadAsync("missing.csv", 1, 0, Limits.DefaultRows);
+
+        Assert.Equal("there is no file 'missing.csv'", refused.Error);
     }
 
     /// <summary>A file read a moment ago and changed since is read afresh, not served as it was.</summary>

@@ -41,7 +41,7 @@
   },
   {
     "name": "documents_outline",
-    "description": "Say what a document holds without reading it: its format and length, its pages, sheets or slides with\ntheir titles, its headings, its tables with their size, and which PDF pages are scans. Each part and\nheading carries the position to pass to documents_read as from, and each table the number to pass to\ndocuments_table.",
+    "description": "Say what a document holds without reading it: its format and length, its pages, sheets or slides with\ntheir titles, its headings, its tables with their size, and which PDF pages are scans. Each part and\nheading carries the position to pass to documents_read as from, and each table the number to pass to\ndocuments_table. Each list stops at 300 entries and says how many it left out.",
     "inputSchema": {
       "type": "object",
       "properties": {

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Snail.MCP.Documents.Application.Ports;
+using Snail.MCP.Documents.Application.Prompts;
 using Snail.MCP.Documents.Domain;
 using Snail.MCP.Documents.Tools.Prompts;
 
@@ -79,6 +80,14 @@ public sealed partial class ToolCatalogTests
     {
         Assert.Contains($"{least} to {most}", description, StringComparison.Ordinal);
         Assert.Contains($"{byDefault} by default", description, StringComparison.Ordinal);
+    }
+
+    /// <summary>The outline says where its lists stop; a cap changed in code and not in prose is a list the model thinks is whole.</summary>
+    [Fact]
+    public void OutlineDescription_StatesWhereEveryListStops()
+    {
+        Assert.Equal([Limits.MostParts, Limits.MostParts], [Limits.MostHeadings, Limits.MostTables]);
+        Assert.Contains($"stops at {Limits.MostParts} entries", ToolDescriptions.Outline, StringComparison.Ordinal);
     }
 
     [GeneratedRegex(@"\bdocuments_[a-z_]+\b", RegexOptions.CultureInvariant)]

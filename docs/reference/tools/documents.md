@@ -59,7 +59,7 @@ page with no text layer is listed under scans: its words are not in the text.
 Say what a document holds without reading it: its format and length, its pages, sheets or slides with
 their titles, its headings, its tables with their size, and which PDF pages are scans. Each part and
 heading carries the position to pass to documents_read as from, and each table the number to pass to
-documents_table.
+documents_table. Each list stops at 300 entries and says how many it left out.
 
 *read-only · repeat-safe · stays on this machine.*
 

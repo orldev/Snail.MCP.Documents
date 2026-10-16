@@ -23,32 +23,53 @@ public sealed class HtmlReader : IFormatReader
     public IReadOnlyList<string> Extensions { get; } = [".html", ".htm"];
 
     /// <inheritdoc/>
-    public IReadOnlyList<Block> Read(Stream content)
+    /// <remarks>
+    /// Parsed with the token: AngleSharp builds a tree of fifty thousand nested elements in some ninety seconds of CPU,
+    /// and only its asynchronous parse stops when asked to.
+    /// </remarks>
+    public async Task<IReadOnlyList<Block>> ReadAsync(Stream content, CancellationToken cancellationToken = default)
     {
-        var page = new HtmlParser().ParseDocument(Decoding.Text(content));
+        var page = await new HtmlParser().ParseDocumentAsync(Decoding.Text(content), cancellationToken);
         List<Block> blocks = [];
 
         if (page.Title is { Length: > 0 } title && page.QuerySelector("h1") is null)
             blocks.Add(new Heading(1, title.Trim()));
 
-        var loose = new StringBuilder();
-        Walk(page.Body ?? page.DocumentElement, blocks, loose, depth: 0);
-        Flush(blocks, loose);
+        Walk(page.Body ?? page.DocumentElement, blocks, cancellationToken);
 
         return blocks;
     }
 
-    private static void Walk(INode node, List<Block> blocks, StringBuilder loose, int depth)
+    /// <summary>Reads the tree in document order without recursion, so the depth of a page costs heap rather than stack.</summary>
+    /// <remarks>
+    /// Recursion overflowed the stack of a pool thread at three thousand nested divs, a page of fifteen kilobytes, and a
+    /// stack overflow ends the process every session of the machine shares. Loose text is flushed when a container is
+    /// entered and when it is left, exactly where the recursive walk flushed it.
+    /// </remarks>
+    private static void Walk(INode root, List<Block> blocks, CancellationToken cancellationToken)
     {
-        foreach (var child in node.ChildNodes)
+        var loose = new StringBuilder();
+        Stack<IEnumerator<INode>> open = [];
+        open.Push(root.ChildNodes.GetEnumerator());
+
+        while (open.TryPeek(out var children))
         {
-            if (child is IText text)
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!children.MoveNext())
+            {
+                open.Pop();
+                Flush(blocks, loose);
+                continue;
+            }
+
+            if (children.Current is IText text)
             {
                 loose.Append(text.Data);
                 continue;
             }
 
-            if (child is not IElement element || Skipped.Contains(element.LocalName))
+            if (children.Current is not IElement element || Skipped.Contains(element.LocalName))
                 continue;
 
             if (Inline.Contains(element.LocalName))
@@ -58,50 +79,75 @@ public sealed class HtmlReader : IFormatReader
             }
 
             Flush(blocks, loose);
-            Read(element, blocks, depth);
+
+            if (!IsReadAsABlock(element, blocks))
+                open.Push(element.ChildNodes.GetEnumerator());
         }
     }
 
-    private static void Read(IElement element, List<Block> blocks, int depth)
+    /// <summary>Adds the block an element is, or answers false for a container whose children are walked instead.</summary>
+    private static bool IsReadAsABlock(IElement element, List<Block> blocks)
     {
         switch (element.LocalName.ToLowerInvariant())
         {
             case "h1" or "h2" or "h3" or "h4" or "h5" or "h6":
                 blocks.Add(new Heading(element.LocalName[1] - '0', Collapsed(element.TextContent)));
-                break;
+                return true;
             case "p" or "blockquote" or "dt" or "dd" or "figcaption" or "caption":
                 blocks.Add(new Paragraph(Collapsed(element.TextContent)));
-                break;
+                return true;
             case "pre":
                 blocks.Add(new CodeBlock(string.Empty, element.TextContent));
-                break;
+                return true;
             case "table":
                 blocks.Add(new TableBlock(element.QuerySelector("caption")?.TextContent.Trim(), Rows(element)));
-                break;
+                return true;
             case "ul" or "ol":
-                Items(element, blocks, depth);
-                break;
+                Items(element, blocks);
+                return true;
             default:
-                var loose = new StringBuilder();
-                Walk(element, blocks, loose, depth);
-                Flush(blocks, loose);
-                break;
+                return false;
         }
     }
 
-    private static void Items(IElement list, List<Block> blocks, int depth)
+    /// <summary>The items of a list and of the lists nested in them, in document order, without recursion.</summary>
+    private static void Items(IElement root, List<Block> blocks)
     {
-        bool isOrdered = list.LocalName.Equals("ol", StringComparison.OrdinalIgnoreCase);
+        Stack<(IEnumerator<IElement> Items, int Depth, bool IsOrdered)> open = [];
+        open.Push((Listed(root), 0, IsOrdered(root)));
 
-        foreach (var item in list.Children.Where(child => child.LocalName.Equals("li", StringComparison.OrdinalIgnoreCase)))
+        while (open.TryPeek(out var list))
         {
-            string own = Collapsed(string.Concat(item.ChildNodes.Where(node => node is not IElement nested || (nested.LocalName is not ("ul" or "ol"))).Select(node => node.TextContent)));
-            blocks.Add(new ListItem(depth, own, isOrdered));
+            if (!list.Items.MoveNext())
+            {
+                open.Pop();
+                continue;
+            }
 
-            foreach (var nested in item.Children.Where(child => child.LocalName is "ul" or "ol"))
-                Items(nested, blocks, depth + 1);
+            var item = list.Items.Current;
+            blocks.Add(new ListItem(list.Depth, OwnText(item), list.IsOrdered));
+
+            var nested = item.Children.Where(IsList).Reverse();
+
+            foreach (var inner in nested)
+                open.Push((Listed(inner), list.Depth + 1, IsOrdered(inner)));
         }
     }
+
+    /// <summary>The text of a list item without the lists nested in it, which are items of their own.</summary>
+    private static string OwnText(IElement item)
+    {
+        var own = item.ChildNodes.Where(node => node is not IElement element || !IsList(element));
+
+        return Collapsed(string.Concat(own.Select(node => node.TextContent)));
+    }
+
+    private static IEnumerator<IElement> Listed(IElement list) =>
+        list.Children.Where(child => child.LocalName.Equals("li", StringComparison.OrdinalIgnoreCase)).GetEnumerator();
+
+    private static bool IsList(IElement element) => element.LocalName is "ul" or "ol";
+
+    private static bool IsOrdered(IElement list) => list.LocalName.Equals("ol", StringComparison.OrdinalIgnoreCase);
 
     private static IReadOnlyList<IReadOnlyList<string>> Rows(IElement table) =>
     [

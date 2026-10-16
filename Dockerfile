@@ -1,7 +1,7 @@
 # The server as a container: one per machine, standing behind every agent on it.
 #
 #   docker build -t snail/s3l-documents-mcp .
-#   docker run -p 8823:8823 -v workspaces:/workspaces:ro snail/s3l-documents-mcp
+#   docker run -p 127.0.0.1:8823:8823 -v workspaces:/workspaces:ro snail/s3l-documents-mcp
 #
 # The volume is the point. This server reads the documents of the working copies, so it runs where the copies
 # are: they are mounted here read-only, and each session names the one it reads through its address —
@@ -24,8 +24,10 @@ FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
 WORKDIR /app
 COPY --from=build /app .
 
-# Every request at Information buries what matters in a container's log; the server's own warnings stay.
+# The volume is the server's root: a session names one copy inside it and is turned away at the door when it names
+# anything else. Every request at Information buries what matters in a container's log; the server's own warnings stay.
 ENV SNAIL_MCP_DOCUMENTS_PORT=8823 \
+    SNAIL_MCP_DOCUMENTS_ROOTS__0=/workspaces \
     Logging__LogLevel__Default=Information \
     Logging__LogLevel__Microsoft.AspNetCore=Warning \
     Logging__LogLevel__ModelContextProtocol=Warning

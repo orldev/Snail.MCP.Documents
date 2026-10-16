@@ -36,7 +36,7 @@ public static class ToolDescriptions
         Say what a document holds without reading it: its format and length, its pages, sheets or slides with
         their titles, its headings, its tables with their size, and which PDF pages are scans. Each part and
         heading carries the position to pass to documents_read as from, and each table the number to pass to
-        documents_table.
+        documents_table. Each list stops at 300 entries and says how many it left out.
         """;
 
     /// <summary>The <c>path</c> of <c>documents_outline</c>.</summary>

@@ -19,7 +19,10 @@ public sealed class PowerPointReader : IFormatReader
     public IReadOnlyList<string> Extensions { get; } = [".pptx", ".pptm"];
 
     /// <inheritdoc/>
-    public IReadOnlyList<Block> Read(Stream content)
+    public Task<IReadOnlyList<Block>> ReadAsync(Stream content, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Read(content, cancellationToken));
+
+    private static IReadOnlyList<Block> Read(Stream content, CancellationToken cancellationToken)
     {
         using var deck = OfficePackage.Opened(() => PresentationDocument.Open(content, isEditable: false));
 
@@ -29,6 +32,7 @@ public sealed class PowerPointReader : IFormatReader
 
         foreach (var id in presentation.Presentation?.SlideIdList?.Elements<P.SlideId>() ?? [])
         {
+            cancellationToken.ThrowIfCancellationRequested();
             number++;
 
             if (id.RelationshipId?.Value is not { } relationship || presentation.GetPartById(relationship) is not SlidePart slide)

@@ -21,7 +21,10 @@ public sealed partial class WordReader : IFormatReader
     public IReadOnlyList<string> Extensions { get; } = [".docx", ".docm"];
 
     /// <inheritdoc/>
-    public IReadOnlyList<Block> Read(Stream content)
+    public Task<IReadOnlyList<Block>> ReadAsync(Stream content, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Read(content, cancellationToken));
+
+    private static IReadOnlyList<Block> Read(Stream content, CancellationToken cancellationToken)
     {
         using var word = OfficePackage.Opened(() => WordprocessingDocument.Open(content, isEditable: false));
 
@@ -30,13 +33,15 @@ public sealed partial class WordReader : IFormatReader
         var levels = HeadingLevels(main.StyleDefinitionsPart);
         var bullets = BulletLevels(main.NumberingDefinitionsPart);
 
-        return [.. Blocks(body, levels, bullets)];
+        return [.. Blocks(body, levels, bullets, cancellationToken)];
     }
 
-    private static IEnumerable<Block> Blocks(OpenXmlElement container, IReadOnlyDictionary<string, int> levels, IReadOnlySet<(int, int)> bullets)
+    private static IEnumerable<Block> Blocks(OpenXmlElement container, IReadOnlyDictionary<string, int> levels, IReadOnlySet<(int, int)> bullets, CancellationToken cancellationToken)
     {
         foreach (var element in container.Elements())
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             switch (element)
             {
                 case W.Paragraph paragraph when Paragraphed(paragraph, levels, bullets) is { } block:
@@ -46,7 +51,7 @@ public sealed partial class WordReader : IFormatReader
                     yield return new TableBlock(null, Rows(table));
                     break;
                 case W.SdtBlock or W.CustomXmlBlock:
-                    foreach (var inner in Blocks(element.Elements().LastOrDefault() ?? element, levels, bullets))
+                    foreach (var inner in Blocks(element.Elements().LastOrDefault() ?? element, levels, bullets, cancellationToken))
                         yield return inner;
                     break;
             }

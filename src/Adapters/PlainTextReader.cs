@@ -10,7 +10,10 @@ public sealed class PlainTextReader : IFormatReader
     public IReadOnlyList<string> Extensions { get; } = [".txt", ".text", ".log"];
 
     /// <inheritdoc/>
-    public IReadOnlyList<Block> Read(Stream content) =>
+    public Task<IReadOnlyList<Block>> ReadAsync(Stream content, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Read(content));
+
+    private static IReadOnlyList<Block> Read(Stream content) =>
     [
         .. Decoding.Text(content)
             .ReplaceLineEndings("\n")

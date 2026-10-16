@@ -12,7 +12,10 @@ public sealed partial class MarkdownReader : IFormatReader
     public IReadOnlyList<string> Extensions { get; } = [".md", ".markdown"];
 
     /// <inheritdoc/>
-    public IReadOnlyList<Block> Read(Stream content)
+    public Task<IReadOnlyList<Block>> ReadAsync(Stream content, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Read(content, cancellationToken));
+
+    private static IReadOnlyList<Block> Read(Stream content, CancellationToken cancellationToken)
     {
         string[] lines = Decoding.Text(content).ReplaceLineEndings("\n").Split('\n');
         List<Block> blocks = [];
@@ -20,6 +23,7 @@ public sealed partial class MarkdownReader : IFormatReader
 
         for (int index = 0; index < lines.Length; index++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string line = lines[index];
 
             if (line.TrimStart().StartsWith("```", StringComparison.Ordinal))
@@ -115,7 +119,13 @@ public sealed partial class MarkdownReader : IFormatReader
     [GeneratedRegex(@"^(?<indent>\s*)(?<mark>[-*+]|\d+[.)])\s+(?<text>.+)$", RegexOptions.CultureInvariant)]
     private static partial Regex ItemLine();
 
-    [GeneratedRegex(@"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$", RegexOptions.CultureInvariant)]
+    /// <summary>The line under a table's header: dashes between bars, colons for alignment.</summary>
+    /// <remarks>
+    /// Without backtracking: the pattern opens with two runs of spaces around an optional bar, and the backtracking engine
+    /// tried every split of them — a table row followed by 40 000 spaces took 22 s. The non-backtracking engine reads
+    /// 400 000 spaces in 1 ms and accepts the same separators.
+    /// </remarks>
+    [GeneratedRegex(@"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking)]
     private static partial Regex Separator();
 
     [GeneratedRegex(@"(?<!\\)\|", RegexOptions.CultureInvariant)]

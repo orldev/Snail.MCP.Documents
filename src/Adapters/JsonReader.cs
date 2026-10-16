@@ -19,8 +19,13 @@ public sealed class JsonReader : IFormatReader
     public IReadOnlyList<string> Extensions { get; } = [".json"];
 
     /// <inheritdoc/>
-    public IReadOnlyList<Block> Read(Stream content)
+    public Task<IReadOnlyList<Block>> ReadAsync(Stream content, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Read(content, cancellationToken));
+
+    private static IReadOnlyList<Block> Read(Stream content, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         JsonNode? root;
 
         try
@@ -41,9 +46,18 @@ public sealed class JsonReader : IFormatReader
     private static bool IsFlatRecord(JsonNode? node) =>
         node is JsonObject record && record.All(field => field.Value is null or JsonValue);
 
+    /// <summary>The records as rows under a header of every key any of them names.</summary>
+    /// <remarks>
+    /// The header is the union of the keys, so records that each name a key of their own make a grid as wide as it is
+    /// long: two thousand records of one field came to 12 032 893 characters. Refused past <see cref="Limits.MostCells"/>.
+    /// </remarks>
     private static IReadOnlyList<IReadOnlyList<string>> Table(JsonArray records)
     {
         List<string> columns = [.. records.Cast<JsonObject>().SelectMany(record => record.Select(field => field.Key)).Distinct(StringComparer.Ordinal)];
+        long cells = (long)columns.Count * (records.Count + 1);
+
+        if (cells > Limits.MostCells)
+            throw new DocumentTooLargeException($"{records.Count} records under {columns.Count} keys come to more than {Limits.MostCells} cells");
 
         return
         [

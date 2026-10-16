@@ -47,6 +47,7 @@ public static class TransportRegistrationExtensions
                     server.ServerInstructions = ServerGuidance.Instructions;
                 })
                 .RefuseWhatWasNotGranted()
+                .ExplainFailures()
                 .WithTools<DocumentTools>();
         }
     }

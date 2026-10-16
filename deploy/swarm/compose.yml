@@ -5,6 +5,7 @@
     pull_policy: ${MCP_PULL_POLICY:-never}
     environment:
       SNAIL_MCP_DOCUMENTS_PORT: 8823
+      SNAIL_MCP_DOCUMENTS_ROOTS__0: /workspaces
     volumes: [ "worker-workspaces:/workspaces:ro" ]
     mem_limit: 512m
     restart: unless-stopped

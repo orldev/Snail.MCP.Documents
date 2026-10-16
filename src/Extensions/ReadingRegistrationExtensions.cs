@@ -15,6 +15,7 @@ public static class ReadingRegistrationExtensions
         {
             services.AddSingleton(settings);
             services.AddSingleton(TimeProvider.System);
+            services.AddSingleton<IDisk, LocalDisk>();
             services.AddSingleton<DocumentMemory>();
             services.AddScoped<SessionRoots>();
             services.AddScoped<DocumentOpening>();

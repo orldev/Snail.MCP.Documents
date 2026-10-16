@@ -13,7 +13,7 @@ namespace Snail.MCP.Documents.Tests.Support;
 /// <summary>Real files of every format, built the way their own programs write them, small enough to read at a glance.</summary>
 internal static class Samples
 {
-    /// <summary>A Word report whose heading style has the id a Russian Word gives «Heading 1»: <c>1</c>.</summary>
+    /// <summary>A Word report whose heading style has the id a Russian Word gives «Heading 1»: <c>1</c>, and whose numbering names a list it does not define.</summary>
     public static byte[] Word()
     {
         using var stream = new MemoryStream();
@@ -27,7 +27,8 @@ internal static class Samples
 
             main.AddNewPart<NumberingDefinitionsPart>().Numbering = new W.Numbering(
                 new W.AbstractNum(new W.Level(new W.NumberingFormat { Val = W.NumberFormatValues.Bullet }) { LevelIndex = 0 }) { AbstractNumberId = 0 },
-                new W.NumberingInstance(new W.AbstractNumId { Val = 0 }) { NumberID = 1 });
+                new W.NumberingInstance(new W.AbstractNumId { Val = 0 }) { NumberID = 1 },
+                new W.NumberingInstance(new W.AbstractNumId { Val = 9 }) { NumberID = 2 });
 
             main.Document = new W.Document(new W.Body(
                 Paragraph("Отчёт за неделю", new W.ParagraphProperties(new W.ParagraphStyleId { Val = "1" })),
@@ -36,6 +37,37 @@ internal static class Samples
                 new W.Table(
                     Row("Месяц", "Сумма"),
                     Row("Январь", "100"))));
+        }
+
+        return stream.ToArray();
+    }
+
+    /// <summary>
+    /// A Word document of the shapes a report takes besides styled headings: a title, a paragraph that is a heading by
+    /// its own outline level, a style that is one by its level, a content control, tabs and line breaks, an empty
+    /// paragraph — and no numbering part at all.
+    /// </summary>
+    public static byte[] WordOfEveryShape()
+    {
+        using var stream = new MemoryStream();
+
+        using (var word = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document))
+        {
+            var main = word.AddMainDocumentPart();
+
+            main.AddNewPart<StyleDefinitionsPart>().Styles = new W.Styles(
+                new W.Style(new W.StyleName { Val = "Title" }) { Type = W.StyleValues.Paragraph, StyleId = "Title" },
+                new W.Style(new W.StyleName { Val = "Подраздел" }, new W.StyleParagraphProperties(new W.OutlineLevel { Val = 2 })) { Type = W.StyleValues.Paragraph, StyleId = "Sub" },
+                new W.Style(new W.StyleName { Val = "heading 4" }) { Type = W.StyleValues.Paragraph });
+
+            main.Document = new W.Document(new W.Body(
+                Paragraph("Заголовок документа", new W.ParagraphProperties(new W.ParagraphStyleId { Val = "Title" })),
+                Paragraph("Раздел", new W.ParagraphProperties(new W.OutlineLevel { Val = 1 })),
+                Paragraph("Подраздел", new W.ParagraphProperties(new W.ParagraphStyleId { Val = "Sub" })),
+                new W.SdtBlock(new W.SdtProperties(), new W.SdtContentBlock(Paragraph("Текст в элементе управления"))),
+                new W.Paragraph(new W.Run(new W.Text("Колонка"), new W.TabChar(), new W.Text("значение"), new W.Break(), new W.Text("вторая строка"))),
+                new W.Paragraph(new W.Run(new W.Text("   "))),
+                Paragraph("пункт без определения списка", new W.ParagraphProperties(new W.NumberingProperties(new W.NumberingLevelReference { Val = 0 }, new W.NumberingId { Val = 1 })))));
         }
 
         return stream.ToArray();
@@ -75,6 +107,35 @@ internal static class Samples
         return stream.ToArray();
     }
 
+    /// <summary>
+    /// A sheet of every kind of cell: an inline string, two booleans, an error, text where a number should be, a date by a
+    /// custom format, a number whose format quotes date letters, a serial too large to be a date, an empty row and a cell
+    /// that names no column.
+    /// </summary>
+    public static byte[] ExcelOfEveryCell() =>
+        Workbook(
+            new S.Stylesheet(
+                new S.NumberingFormats(
+                    new S.NumberingFormat { NumberFormatId = 164, FormatCode = "dd.mm.yyyy" },
+                    new S.NumberingFormat { NumberFormatId = 165, FormatCode = "0.0\" dm\"" }),
+                new S.CellFormats(new S.CellFormat { NumberFormatId = 0 }, new S.CellFormat { NumberFormatId = 164 }, new S.CellFormat { NumberFormatId = 165 })),
+            SheetRow(1,
+                new S.Cell { CellReference = "A1", DataType = S.CellValues.InlineString, InlineString = new S.InlineString(new S.Text("Строка")) },
+                new S.Cell { CellReference = "B1", DataType = S.CellValues.Boolean, CellValue = new S.CellValue("1") },
+                new S.Cell { CellReference = "C1", DataType = S.CellValues.Boolean, CellValue = new S.CellValue("0") },
+                new S.Cell { CellReference = "D1", DataType = S.CellValues.Error, CellValue = new S.CellValue("#DIV/0!") }),
+            SheetRow(2,
+                Number("A2", "n/a"),
+                new S.Cell { CellReference = "B2", StyleIndex = 1, CellValue = new S.CellValue("46305") },
+                new S.Cell { CellReference = "C2", StyleIndex = 2, CellValue = new S.CellValue("12.5") },
+                new S.Cell { CellReference = "D2", StyleIndex = 1, CellValue = new S.CellValue("3000000") }),
+            SheetRow(3, Number("A3", string.Empty)),
+            SheetRow(4, new S.Cell { CellValue = new S.CellValue("без адреса") }));
+
+    /// <summary>A workbook saved with no styles part: a cell points at a format the file does not have.</summary>
+    public static byte[] ExcelWithoutStyles() =>
+        Workbook(null, SheetRow(1, new S.Cell { CellReference = "A1", StyleIndex = 1, CellValue = new S.CellValue("46305") }));
+
     /// <summary>A presentation of one slide: a title, two points one level apart, a table and the speaker's notes.</summary>
     public static byte[] Slides()
     {
@@ -101,6 +162,48 @@ internal static class Samples
         return stream.ToArray();
     }
 
+    /// <summary>
+    /// A presentation whose first slide is listed without a link to its part, and whose second holds a text box inside a
+    /// group, with a line break and an empty line in it.
+    /// </summary>
+    public static byte[] SlidesOfEveryShape()
+    {
+        using var stream = new MemoryStream();
+
+        using (var deck = PresentationDocument.Create(stream, PresentationDocumentType.Presentation))
+        {
+            var presentation = deck.AddPresentationPart();
+            var slide = presentation.AddNewPart<SlidePart>();
+
+            var box = new P.Shape(
+                new P.NonVisualShapeProperties(
+                    new P.NonVisualDrawingProperties { Id = 3, Name = "Text box" },
+                    new P.NonVisualShapeDrawingProperties(),
+                    new P.ApplicationNonVisualDrawingProperties()),
+                new P.ShapeProperties(),
+                new P.TextBody(
+                    new A.BodyProperties(),
+                    new A.Paragraph(new A.Run(new A.Text("Первая")), new A.Break(), new A.Run(new A.Text("вторая"))),
+                    new A.Paragraph()));
+
+            slide.Slide = new P.Slide(new P.CommonSlideData(new P.ShapeTree(
+                Placeholder(P.PlaceholderValues.Title, Text("Схема")),
+                new P.GroupShape(
+                    new P.NonVisualGroupShapeProperties(
+                        new P.NonVisualDrawingProperties { Id = 4, Name = "Group" },
+                        new P.NonVisualGroupShapeDrawingProperties(),
+                        new P.ApplicationNonVisualDrawingProperties()),
+                    new P.GroupShapeProperties(),
+                    box))));
+
+            presentation.Presentation = new P.Presentation(new P.SlideIdList(
+                new P.SlideId { Id = 256 },
+                new P.SlideId { Id = 257, RelationshipId = presentation.GetIdOfPart(slide) }));
+        }
+
+        return stream.ToArray();
+    }
+
     /// <summary>A PDF of two pages: text on the first, a picture alone on the second — a scan.</summary>
     public static byte[] Pdf()
     {
@@ -111,6 +214,17 @@ internal static class Samples
         builder.AddPage(UglyToad.PdfPig.Content.PageSize.A4).AddPng(Png, new UglyToad.PdfPig.Core.PdfRectangle(72, 72, 300, 300));
 
         return builder.Build();
+    }
+
+    /// <summary>A PDF locked by a password nobody here knows: its trailer names a standard security handler that rejects the empty one.</summary>
+    public static byte[] LockedPdf()
+    {
+        string pdf = Encoding.Latin1.GetString(Pdf());
+        string key = new('0', 64);
+
+        string locked = pdf.Replace("trailer\n<<", $"trailer\n<< /Encrypt << /Filter /Standard /V 1 /R 2 /O <{key}> /U <{key}> /P -4 >> ", StringComparison.Ordinal);
+
+        return Encoding.Latin1.GetBytes(locked);
     }
 
     /// <summary>A CSV the way a Russian Excel saves one: Windows-1251, semicolons, a quoted cell holding the separator.</summary>
@@ -124,6 +238,28 @@ internal static class Samples
     /// <summary>The smallest PNG there is: one pixel.</summary>
     private static byte[] Png { get; } = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
 
+    /// <summary>A workbook of one sheet holding <paramref name="rows"/>, with <paramref name="styles"/> as its styles part when there is one.</summary>
+    private static byte[] Workbook(S.Stylesheet? styles, params S.Row[] rows)
+    {
+        using var stream = new MemoryStream();
+
+        using (var book = SpreadsheetDocument.Create(stream, SpreadsheetDocumentType.Workbook))
+        {
+            var workbook = book.AddWorkbookPart();
+            workbook.Workbook = new S.Workbook();
+
+            if (styles is not null)
+                workbook.AddNewPart<WorkbookStylesPart>().Stylesheet = styles;
+
+            var sheet = workbook.AddNewPart<WorksheetPart>();
+            sheet.Worksheet = new S.Worksheet(new S.SheetData(rows));
+
+            workbook.Workbook.AppendChild(new S.Sheets(new S.Sheet { Id = workbook.GetIdOfPart(sheet), SheetId = 1, Name = "Лист1" }));
+        }
+
+        return stream.ToArray();
+    }
+
     private static W.Paragraph Paragraph(string text, W.ParagraphProperties? properties = null) =>
         properties is null
             ? new W.Paragraph(new W.Run(new W.Text(text)))
@@ -131,6 +267,9 @@ internal static class Samples
 
     private static W.TableRow Row(params string[] cells) =>
         new([.. cells.Select(cell => new W.TableCell(Paragraph(cell)))]);
+
+    private static S.Row SheetRow(uint index, params S.Cell[] cells) =>
+        new(cells) { RowIndex = index };
 
     private static S.Cell Shared(string reference, int index) =>
         new() { CellReference = reference, DataType = S.CellValues.SharedString, CellValue = new S.CellValue(index.ToString(System.Globalization.CultureInfo.InvariantCulture)) };

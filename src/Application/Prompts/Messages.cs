@@ -1,8 +1,8 @@
-namespace Snail.MCP.Documents.Tools.Prompts;
+namespace Snail.MCP.Documents.Application.Prompts;
 
 /// <summary>What a caller is told when something did not work: the reason, and the next move.</summary>
 /// <remarks>
-/// Kept apart from <see cref="ToolDescriptions"/> because the audience differs. A description is read before
+/// Kept apart from <see cref="Tools.Prompts.ToolDescriptions"/> because the audience differs. A description is read before
 /// a call and steers what is asked; a message is read after one and has to end the guessing.
 /// </remarks>
 public static class Messages
@@ -10,6 +10,14 @@ public static class Messages
     /// <summary>A file too large to open.</summary>
     public static string TooLarge(long bytes, int most) =>
         $"the file is {bytes} bytes, and this server opens files up to {most}";
+
+    /// <summary>A file small enough on disk that comes to too much once read.</summary>
+    public static string TooLargeOnceRead(string why) =>
+        $"the file is too large once read: {why}";
+
+    /// <summary>A file whose reading took longer than a file may.</summary>
+    public static string TooSlow(int seconds) =>
+        $"the file took more than {seconds} seconds to read and was not read to the end";
 
     /// <summary>What to do about a file too large to open.</summary>
     public const string TooLargeHint = "Split the document, or read a smaller export of it.";
@@ -27,6 +35,13 @@ public static class Messages
 
     /// <summary>What to do about a damaged file.</summary>
     public const string DamagedHint = "The file is damaged or is not what its name says. Ask for it again rather than retrying the read.";
+
+    /// <summary>A file that is there and could not be opened.</summary>
+    public static string Unreadable(string why) =>
+        $"the file could not be opened: {why}";
+
+    /// <summary>What to do about a file that could not be opened.</summary>
+    public const string UnreadableHint = "Check that it is a plain file this server may read; a file that is being written or replaced can be read once that is done.";
 
     /// <summary>A position past the end of the text.</summary>
     public static string FromBeyondTheEnd(int from, int total) =>
@@ -47,6 +62,13 @@ public static class Messages
     /// <summary>A number outside the range a description promises.</summary>
     public static string OutOfRange(string name, int value, int least, int most) =>
         $"{name} must be between {least} and {most}, not {value}";
+
+    /// <summary>A call that failed inside the server for a reason nobody foresaw.</summary>
+    public static string Failed(string tool, string kind, string why) =>
+        $"{tool} failed inside the server ({kind}): {why}";
+
+    /// <summary>What to do about a failure inside the server.</summary>
+    public const string FailedHint = "This is a fault of the server, not of the call: other documents still read. Do not repeat this call; report the file instead.";
 
     /// <summary>What to do when the outline is the better first step.</summary>
     public const string OutlineHint = "Call documents_outline to see the parts and tables there are.";

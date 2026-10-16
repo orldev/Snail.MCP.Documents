@@ -13,27 +13,56 @@ public sealed class DocumentMemory(ServerConfig config, TimeProvider clock)
 {
     private readonly ConcurrentDictionary<string, Remembered> _documents = new(StringComparer.Ordinal);
 
+    private readonly ConcurrentDictionary<string, Lazy<Task<Opened>>> _reading = new(StringComparer.Ordinal);
+
     private TimeSpan Lifetime => TimeSpan.FromMinutes(config.MemoryMinutes);
 
     /// <summary>The document as it was read, or null when it was not, was read too long ago, or the file changed since.</summary>
-    public Document? Of(FileInfo file) =>
-        _documents.TryGetValue(file.FullName, out var remembered) && IsFresh(remembered) && remembered.Stamp == Stamp(file)
+    public Document? Of(string path, FileStamp stamp) =>
+        _documents.TryGetValue(path, out var remembered) && IsFresh(remembered) && remembered.Stamp == stamp
             ? remembered.Document
             : null;
 
-    /// <summary>Remembers a document under its file, making room when the memory is full.</summary>
-    public void Keep(FileInfo file, Document document)
+    /// <summary>The document as remembered, or read once however many calls ask for the same file at the same moment.</summary>
+    /// <remarks>
+    /// The memory is checked before a read and filled after it, so without this sixteen calls that arrive together for a
+    /// file nobody has read yet parsed it sixteen times — sixteen copies of the file and its text on the heap at once.
+    /// The read is shared and not cancelled by any one caller, since its failure would be every caller's; a caller that
+    /// gives up only stops waiting for it.
+    /// </remarks>
+    public async Task<Opened> OnceAsync(string path, FileStamp stamp, Func<Task<Opened>> read, CancellationToken cancellationToken = default)
+    {
+        if (Of(path, stamp) is { } remembered)
+            return Opened.Of(remembered);
+
+        string key = $"{path}|{stamp.Length}|{stamp.WrittenUtc.Ticks}";
+        var reading = _reading.GetOrAdd(key, _ => new Lazy<Task<Opened>>(read));
+
+        try
+        {
+            var opened = await reading.Value.WaitAsync(cancellationToken);
+
+            if (opened.Document is { } document)
+                Keep(path, stamp, document);
+
+            return opened;
+        }
+        finally
+        {
+            _reading.TryRemove(KeyValuePair.Create(key, reading));
+        }
+    }
+
+    /// <summary>Remembers a document under the path and version of its file, making room when the memory is full.</summary>
+    public void Keep(string path, FileStamp stamp, Document document)
     {
         if (Lifetime <= TimeSpan.Zero)
             return;
 
-        _documents[file.FullName] = new Remembered(document, Stamp(file), clock.GetUtcNow());
+        _documents[path] = new Remembered(document, stamp, clock.GetUtcNow());
 
         Forget();
     }
-
-    private static string Stamp(FileInfo file) =>
-        $"{file.Length}:{file.LastWriteTimeUtc.Ticks}";
 
     private bool IsFresh(Remembered remembered) => clock.GetUtcNow() - remembered.ReadAt < Lifetime;
 
@@ -47,5 +76,5 @@ public sealed class DocumentMemory(ServerConfig config, TimeProvider clock)
             _documents.TryRemove(path, out _);
     }
 
-    private sealed record Remembered(Document Document, string Stamp, DateTimeOffset ReadAt);
+    private sealed record Remembered(Document Document, FileStamp Stamp, DateTimeOffset ReadAt);
 }

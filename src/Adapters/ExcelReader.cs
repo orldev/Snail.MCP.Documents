@@ -14,6 +14,9 @@ namespace Snail.MCP.Documents.Adapters;
 /// </remarks>
 public sealed partial class ExcelReader : IFormatReader
 {
+    /// <summary>The last column a sheet has, XFD, counted from one.</summary>
+    private const int LastColumn = 16_384;
+
     /// <inheritdoc/>
     public DocumentKind Format => DocumentKind.Excel;
 
@@ -21,7 +24,10 @@ public sealed partial class ExcelReader : IFormatReader
     public IReadOnlyList<string> Extensions { get; } = [".xlsx", ".xlsm"];
 
     /// <inheritdoc/>
-    public IReadOnlyList<Block> Read(Stream content)
+    public Task<IReadOnlyList<Block>> ReadAsync(Stream content, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Read(content, cancellationToken));
+
+    private static IReadOnlyList<Block> Read(Stream content, CancellationToken cancellationToken)
     {
         using var book = OfficePackage.Opened(() => SpreadsheetDocument.Open(content, isEditable: false));
 
@@ -36,19 +42,22 @@ public sealed partial class ExcelReader : IFormatReader
             number++;
             blocks.Add(new PartStart(PartKind.Sheet, number, sheet.Name?.Value));
 
-            if (sheet.Id?.Value is { } id && workbook.GetPartById(id) is WorksheetPart part && Rows(part, shared, dates) is { Count: > 0 } rows)
+            if (sheet.Id?.Value is { } id && workbook.GetPartById(id) is WorksheetPart part && Rows(part, shared, dates, cancellationToken) is { Count: > 0 } rows)
                 blocks.Add(new TableBlock(sheet.Name?.Value, rows));
         }
 
         return blocks;
     }
 
-    private static IReadOnlyList<IReadOnlyList<string>> Rows(WorksheetPart part, IReadOnlyList<string> shared, IReadOnlySet<uint> dates)
+    private static IReadOnlyList<IReadOnlyList<string>> Rows(WorksheetPart part, IReadOnlyList<string> shared, IReadOnlySet<uint> dates, CancellationToken cancellationToken)
     {
         List<string[]> rows = [];
+        long padded = 0;
 
         foreach (var row in part.Worksheet?.Descendants<Row>() ?? [])
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             List<(int Column, string Value)> cells = [];
 
             foreach (var cell in row.Elements<Cell>())
@@ -60,7 +69,13 @@ public sealed partial class ExcelReader : IFormatReader
             if (cells.Count == 0)
                 continue;
 
-            string[] filled = new string[cells.Max(cell => cell.Column) + 1];
+            int width = cells.Max(cell => cell.Column) + 1;
+            padded += width;
+
+            if (padded > Limits.MostCells)
+                throw new DocumentTooLargeException($"a sheet comes to more than {Limits.MostCells} cells once its rows are padded to their last column");
+
+            string[] filled = new string[width];
             Array.Fill(filled, string.Empty);
 
             foreach (var (column, value) in cells)
@@ -112,6 +127,11 @@ public sealed partial class ExcelReader : IFormatReader
     }
 
     /// <summary>The zero-based column of a reference such as <c>AB12</c>; null without one.</summary>
+    /// <remarks>
+    /// A reference past XFD, the last column a sheet has, is no workbook Excel wrote: unbounded, <c>ZZZZZZZ1</c> overflowed
+    /// the arithmetic into an array no process can allocate. Only ASCII letters are columns — any letter made a Cyrillic
+    /// one column 1006.
+    /// </remarks>
     internal static int? Column(string? reference)
     {
         if (string.IsNullOrEmpty(reference))
@@ -119,8 +139,13 @@ public sealed partial class ExcelReader : IFormatReader
 
         int column = 0;
 
-        foreach (char letter in reference.TakeWhile(char.IsLetter))
+        foreach (char letter in reference.TakeWhile(char.IsAsciiLetter))
+        {
             column = (column * 26) + (char.ToUpperInvariant(letter) - 'A' + 1);
+
+            if (column > LastColumn)
+                throw new InvalidDataException($"'{reference}' is past XFD, the last column a sheet has");
+        }
 
         return column == 0 ? null : column - 1;
     }

@@ -85,6 +85,23 @@ public sealed class StdioContractTests : IDisposable
         Assert.False(string.IsNullOrWhiteSpace(read.Data()["text"]?.GetValue<string>()), name);
     }
 
+    /// <summary>
+    /// A stack overflow is not an exception: the process ends, and with it every session of the machine. The HTML reader
+    /// once walked the tree by recursion, and three thousand nested divs — fifteen kilobytes — were enough.
+    /// </summary>
+    [Fact]
+    public async Task Read_PageNestedFiveThousandDeep_LeavesTheServerAnswering()
+    {
+        _copy.Write("deep.html", $"<html><body>{string.Concat(Enumerable.Repeat("<div>", 5_000))}x</body></html>");
+        await using var client = await StartedAsync();
+
+        var answer = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "deep.html" });
+        var listed = await client.ListToolsAsync();
+
+        Assert.NotEqual(true, answer.IsError);
+        Assert.NotEmpty(listed);
+    }
+
     private Task<McpClient> StartedAsync()
     {
         var (command, arguments) = ServerProgram.Command("Snail.MCP.Documents", "SNAIL_DOCUMENTS_SERVER");

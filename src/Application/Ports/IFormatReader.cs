@@ -2,8 +2,9 @@ namespace Snail.MCP.Documents.Application.Ports;
 
 /// <summary>Reads one format of file into the blocks every format shares.</summary>
 /// <remarks>
-/// Synchronous on purpose: the libraries behind every format read a stream that is already in memory, and
-/// the file is brought into memory asynchronously before any of them is called.
+/// The stream is already in memory when a reader is called, so most formats are read synchronously inside the task. The
+/// token is what bounds them: a reader checks it between the rows, pages, slides or elements it walks, and HTML is
+/// parsed with it, since a hostile page keeps a parser busy for minutes.
 /// </remarks>
 public interface IFormatReader
 {
@@ -15,5 +16,7 @@ public interface IFormatReader
 
     /// <summary>The blocks of the document in <paramref name="content"/>.</summary>
     /// <exception cref="InvalidDataException">The file is not in this format, or is damaged past reading.</exception>
-    IReadOnlyList<Block> Read(Stream content);
+    /// <exception cref="DocumentTooLargeException">The file unpacks to more than one document may come to.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the reading ended.</exception>
+    Task<IReadOnlyList<Block>> ReadAsync(Stream content, CancellationToken cancellationToken = default);
 }

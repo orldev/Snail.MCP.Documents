@@ -10,7 +10,7 @@ namespace Snail.MCP.Documents.Application;
 /// it likes; a session that names none gets the configured roots, which is how a server started as a program
 /// for one caller is confined. Closed by default: a server with no roots at all reads nothing rather than the disk.
 /// </remarks>
-public sealed class SessionRoots(ServerConfig config, ISessionAddress address)
+public sealed class SessionRoots(ServerConfig config, ISessionAddress address, IDisk disk)
 {
     /// <summary>What the address calls the root it hands over; repeat it for more than one.</summary>
     public const string Parameter = "root";
@@ -29,14 +29,32 @@ public sealed class SessionRoots(ServerConfig config, ISessionAddress address)
     /// it at once: a root that does not exist here means the copy is on a different host, and every answer this
     /// session could give would be about the wrong files.
     /// </remarks>
-    public static IReadOnlyList<string> Absent(IEnumerable<string> named) =>
+    public static IReadOnlyList<string> Absent(IEnumerable<string> named, IDisk disk) =>
     [
         .. named
             .Where(root => !string.IsNullOrWhiteSpace(root))
             .Select(root => Path.GetFullPath(root.Trim()))
-            .Where(root => !Directory.Exists(root))
+            .Where(root => !disk.IsFolder(root))
             .Distinct(StringComparer.Ordinal)
     ];
+
+    /// <summary>Of the roots a session names, the ones outside every configured root.</summary>
+    /// <remarks>
+    /// The configured root of a shared server is the volume of the machine's working copies, and a session names one copy
+    /// in it. Without this check a session could name any folder the process can see — another task's copy, the server's
+    /// own files — and the only test it had to pass was that the folder exists. A server configured with no root serves
+    /// whatever its sessions name, which is how a program started for one caller has always been.
+    /// </remarks>
+    public static IReadOnlyList<string> Outside(IEnumerable<string> named, IEnumerable<string> configured, IDisk disk)
+    {
+        var volumes = Paths(configured).Select(disk.Real).ToList();
+        if (volumes.Count == 0)
+            return [];
+
+        var roots = Paths(named);
+
+        return [.. roots.Where(root => !volumes.Any(volume => IsUnder(disk.Real(root), volume)))];
+    }
 
     /// <summary>The file as this server will read it, or why it may not be read.</summary>
     /// <remarks>
@@ -54,16 +72,16 @@ public sealed class SessionRoots(ServerConfig config, ISessionAddress address)
         if (string.IsNullOrWhiteSpace(path))
             return Reached.No("name a file", $"paths are relative to {roots[0]}, or absolute inside it");
 
-        string full = Real(Path.IsPathRooted(path.Trim())
+        string full = disk.Real(Path.IsPathRooted(path.Trim())
             ? Path.GetFullPath(path.Trim())
             : Path.GetFullPath(Path.Combine(roots[0], path.Trim())));
 
-        if (!roots.Any(root => IsUnder(full, Real(root))))
+        if (!roots.Any(root => IsUnder(full, disk.Real(root))))
             return Reached.No($"'{path.Trim()}' is outside this session, which reads {string.Join(", ", roots)}");
 
-        return File.Exists(full)
+        return disk.IsFile(full)
             ? Reached.Yes(full)
-            : Reached.No($"there is no file '{path.Trim()}'", Directory.Exists(full) ? "that is a folder: name a file inside it" : "check the name and the folder it is in");
+            : Reached.No($"there is no file '{path.Trim()}'", disk.IsFolder(full) ? "that is a folder: name a file inside it" : "check the name and the folder it is in");
     }
 
     private static IReadOnlyList<string> Paths(IEnumerable<string> roots) =>
@@ -77,52 +95,4 @@ public sealed class SessionRoots(ServerConfig config, ISessionAddress address)
     private static bool IsUnder(string path, string root) =>
         string.Equals(path, root, StringComparison.Ordinal)
         || path.StartsWith($"{root.TrimEnd(Path.DirectorySeparatorChar)}{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
-
-    /// <summary>The path with every link on it resolved; the nearest existing parent for one that does not exist.</summary>
-    /// <remarks>
-    /// Every link on the path, not just the last one: <c>ResolveLinkTarget</c> answers about the final component
-    /// alone, so a link in the middle — <c>/copy/out/secret.txt</c> where <c>out</c> leads elsewhere — resolves
-    /// to itself and walks straight out of the root. It is the cheapest escape there is.
-    /// </remarks>
-    private static string Real(string path)
-    {
-        string existing = path;
-        Stack<string> tail = [];
-
-        while (!Directory.Exists(existing) && !File.Exists(existing))
-        {
-            string? parent = Path.GetDirectoryName(existing);
-            if (string.IsNullOrEmpty(parent) || parent == existing)
-                return path;
-
-            tail.Push(Path.GetFileName(existing));
-            existing = parent;
-        }
-
-        string resolved = Resolved(existing);
-
-        return tail.Count == 0 ? resolved : Path.Combine([resolved, .. tail]);
-    }
-
-    private static string Resolved(string existing)
-    {
-        if (Link(existing) is { } target)
-            return Resolved(target);
-
-        string? parent = Path.GetDirectoryName(existing);
-
-        if (string.IsNullOrEmpty(parent) || parent == existing)
-            return existing;
-
-        string real = Resolved(parent);
-
-        return string.Equals(real, parent, StringComparison.Ordinal)
-            ? existing
-            : Path.Combine(real, Path.GetFileName(existing));
-    }
-
-    private static string? Link(string path) =>
-        (Directory.Exists(path)
-            ? new DirectoryInfo(path).ResolveLinkTarget(returnFinalTarget: true)
-            : new FileInfo(path).ResolveLinkTarget(returnFinalTarget: true))?.FullName;
 }

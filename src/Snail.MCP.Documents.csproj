@@ -7,7 +7,6 @@
         too: its Dockerfile publishes for linux-x64.
     -->
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
         <SnailMcpTransport>Both</SnailMcpTransport>
         <SnailMcpContainer>true</SnailMcpContainer>
         <DebugType Condition="'$(PublishAot)' == 'true' and '$(Configuration)' == 'Release'">none</DebugType>

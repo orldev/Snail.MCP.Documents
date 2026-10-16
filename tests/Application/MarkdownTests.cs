@@ -37,4 +37,38 @@ public sealed class MarkdownTests
         Assert.Equal("Текст", document.Text);
         Assert.Empty(document.Tables);
     }
+
+    /// <summary>A block a newer adapter invents and this writer does not know is left out, not written as its type name.</summary>
+    [Fact]
+    public void Of_ABlockOfAKindNobodyWrites_LeavesItOut()
+    {
+        var document = Markdown.Of(DocumentKind.Text, [new Paragraph("Текст"), new Unknown()]);
+
+        Assert.Equal("Текст", document.Text);
+    }
+
+    [Fact]
+    public void Grid_RowsWithNoCells_IsNoTable() =>
+        Assert.Equal(string.Empty, Markdown.Grid([[], []]));
+
+    /// <summary>A file that unpacks to more text than a document may is refused while it is written, not after.</summary>
+    [Fact]
+    public void Of_BlocksPastTheCharacterBudget_IsRefusedAsTooLarge() =>
+        Assert.Throws<DocumentTooLargeException>(() => Markdown.Of(DocumentKind.Text,
+        [
+            new Paragraph(new string('x', Limits.MostDocumentCharacters / 2)),
+            new Paragraph(new string('y', Limits.MostDocumentCharacters / 2))
+        ]));
+
+    /// <summary>One wide row makes every row as wide; padded, a table of a few thousand cells becomes millions.</summary>
+    [Fact]
+    public void Grid_RowsPaddedPastTheCellBudget_IsRefusedAsTooLarge()
+    {
+        IReadOnlyList<string> wide = [.. Enumerable.Repeat("x", 1_001)];
+        IReadOnlyList<IReadOnlyList<string>> rows = [wide, .. Enumerable.Repeat<IReadOnlyList<string>>(["x"], Limits.MostCells / 1_001)];
+
+        Assert.Throws<DocumentTooLargeException>(() => Markdown.Grid(rows));
+    }
+
+    private sealed record Unknown : Block;
 }

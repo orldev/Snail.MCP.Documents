@@ -20,13 +20,18 @@ public sealed class PdfReader : IFormatReader
     public IReadOnlyList<string> Extensions { get; } = [".pdf"];
 
     /// <inheritdoc/>
-    public IReadOnlyList<Block> Read(Stream content)
+    public Task<IReadOnlyList<Block>> ReadAsync(Stream content, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Read(content, cancellationToken));
+
+    private static IReadOnlyList<Block> Read(Stream content, CancellationToken cancellationToken)
     {
         using var pdf = Opened(content);
         List<Block> blocks = [];
 
         foreach (var page in pdf.GetPages())
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             string text = ContentOrderTextExtractor.GetText(page).ReplaceLineEndings("\n");
             bool isScanned = string.IsNullOrWhiteSpace(text) && page.GetImages().Any();
 

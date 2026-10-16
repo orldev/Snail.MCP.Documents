@@ -1,4 +1,4 @@
-using Snail.MCP.Documents.Tools.Prompts;
+using Snail.MCP.Documents.Application.Prompts;
 
 namespace Snail.MCP.Documents.Application;
 

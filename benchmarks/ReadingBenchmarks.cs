@@ -1,7 +1,7 @@
 using BenchmarkDotNet.Attributes;
 using Snail.MCP.Documents.Adapters;
 using Snail.MCP.Documents.Application;
-using Snail.MCP.Documents.Domain;
+using Snail.MCP.Documents.Application.Ports;
 
 namespace Snail.MCP.Documents.Benchmarks;
 
@@ -13,32 +13,75 @@ public class ReadingBenchmarks
 
     private readonly ExcelReader _excel = new();
 
+    private readonly HtmlReader _html = new();
+
+    private readonly MarkdownReader _markdown = new();
+
+    private readonly DelimitedReader _csv = new();
+
+    private readonly JsonReader _json = new();
+
+    private readonly PdfReader _pdf = new();
+
     private byte[] _report = [];
 
     private byte[] _ledger = [];
+
+    private byte[] _page = [];
+
+    private byte[] _notes = [];
+
+    private byte[] _export = [];
+
+    private byte[] _records = [];
+
+    private byte[] _pages = [];
 
     [GlobalSetup]
     public void Setup()
     {
         _report = Files.Report();
         _ledger = Files.Ledger();
+        _page = Files.Page();
+        _notes = Files.Notes();
+        _export = Files.Export();
+        _records = Files.Records();
+        _pages = Files.Pages();
     }
 
     /// <summary>A Word report of twenty sections read as Markdown.</summary>
     [Benchmark]
-    public int Word()
-    {
-        using var content = new MemoryStream(_report);
-
-        return Markdown.Of(DocumentKind.Word, _word.Read(content)).Text.Length;
-    }
+    public Task<int> Word() => Read(_word, _report);
 
     /// <summary>A workbook of three sheets of four hundred rows read as Markdown.</summary>
     [Benchmark]
-    public int Excel()
-    {
-        using var content = new MemoryStream(_ledger);
+    public Task<int> Excel() => Read(_excel, _ledger);
 
-        return Markdown.Of(DocumentKind.Excel, _excel.Read(content)).Text.Length;
+    /// <summary>A web page of twenty sections in nested containers read as Markdown.</summary>
+    [Benchmark]
+    public Task<int> Html() => Read(_html, _page);
+
+    /// <summary>Notes of twenty sections in Markdown read as Markdown.</summary>
+    [Benchmark]
+    public Task<int> Notes() => Read(_markdown, _notes);
+
+    /// <summary>A CSV export of two thousand rows read as one table.</summary>
+    [Benchmark]
+    public Task<int> Csv() => Read(_csv, _export);
+
+    /// <summary>A JSON export of a thousand records read as one table.</summary>
+    [Benchmark]
+    public Task<int> Json() => Read(_json, _records);
+
+    /// <summary>A PDF of twenty pages of text read as Markdown.</summary>
+    [Benchmark]
+    public Task<int> Pdf() => Read(_pdf, _pages);
+
+    private static async Task<int> Read(IFormatReader reader, byte[] file)
+    {
+        using var content = new MemoryStream(file);
+        var blocks = await reader.ReadAsync(content);
+
+        return Markdown.Of(reader.Format, blocks).Text.Length;
     }
 }

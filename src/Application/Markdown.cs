@@ -11,6 +11,7 @@ namespace Snail.MCP.Documents.Application;
 public static class Markdown
 {
     /// <summary>The document the blocks make.</summary>
+    /// <exception cref="DocumentTooLargeException">The text, or one of its tables, comes to more than one document may.</exception>
     public static Document Of(DocumentKind format, IReadOnlyList<Block> blocks)
     {
         var text = new StringBuilder();
@@ -24,8 +25,12 @@ public static class Markdown
             if (Written(block) is not { Length: > 0 } written)
                 continue;
 
-            if (text.Length > 0)
-                text.Append(IsListItemAfterListItem(previous, block) ? "\n" : "\n\n");
+            string separator = Separator(text.Length, previous, block);
+
+            if (text.Length + separator.Length + written.Length > Limits.MostDocumentCharacters)
+                throw new DocumentTooLargeException($"its text comes to more than {Limits.MostDocumentCharacters} characters");
+
+            text.Append(separator);
 
             int at = text.Length;
 
@@ -57,7 +62,7 @@ public static class Markdown
         PartStart start => PartLine(start),
         Heading heading => string.IsNullOrWhiteSpace(heading.Text) ? string.Empty : $"{new string('#', Math.Clamp(heading.Level, 1, 6))} {Line(heading.Text)}",
         Paragraph paragraph => paragraph.Text.Trim(),
-        ListItem item => string.IsNullOrWhiteSpace(item.Text) ? string.Empty : $"{new string(' ', item.Depth * 2)}{(item.IsOrdered ? "1." : "-")} {Line(item.Text)}",
+        ListItem item => string.IsNullOrWhiteSpace(item.Text) ? string.Empty : $"{new string(' ', Math.Clamp(item.Depth, 0, Limits.MostListDepth) * 2)}{(item.IsOrdered ? "1." : "-")} {Line(item.Text)}",
         TableBlock table => Grid(table.Rows),
         CodeBlock code => string.IsNullOrWhiteSpace(code.Text) ? string.Empty : $"```{code.Language}\n{code.Text.TrimEnd()}\n```",
         _ => string.Empty
@@ -72,6 +77,7 @@ public static class Markdown
     }
 
     /// <summary>Rows as a Markdown table, the first of them the header; every row as wide as the widest.</summary>
+    /// <remarks>Refused past <see cref="Limits.MostCells"/>: padding every row to the widest is what turns a ragged table of a few rows into millions of empty cells.</remarks>
     internal static string Grid(IReadOnlyList<IReadOnlyList<string>> rows)
     {
         if (rows.Count == 0)
@@ -80,6 +86,9 @@ public static class Markdown
         int columns = rows.Max(row => row.Count);
         if (columns == 0)
             return string.Empty;
+
+        if ((long)rows.Count * columns > Limits.MostCells)
+            throw new DocumentTooLargeException($"a table of {rows.Count} rows and {columns} columns comes to more than {Limits.MostCells} cells");
 
         var grid = new StringBuilder();
 
@@ -103,6 +112,15 @@ public static class Markdown
 
     private static string Line(string text) =>
         string.Join(' ', text.Split((char[])['\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries).Select(piece => piece.Trim()).Where(piece => piece.Length > 0));
+
+    /// <summary>What goes before a block: nothing at the start, a line break between list items, a blank line otherwise.</summary>
+    private static string Separator(int written, Block? previous, Block block)
+    {
+        if (written == 0)
+            return string.Empty;
+
+        return IsListItemAfterListItem(previous, block) ? "\n" : "\n\n";
+    }
 
     private static bool IsListItemAfterListItem(Block? previous, Block block) =>
         previous is ListItem && block is ListItem;

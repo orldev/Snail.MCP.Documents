@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Snail.MCP.Documents.Configuration;
 using Snail.Sdk.Mcp.Hosting;
+using Snail.Sdk.Mcp.Http;
 
 namespace Snail.MCP.Documents.Extensions;
 
@@ -30,7 +31,9 @@ public static class McpServerHost
     /// Bound on every interface because the callers are the workers of the machine, each in its own container:
     /// a server on loopback would be reachable from nothing but itself. There is no token for the same reason
     /// there is no published port — the platform hands a server at an address no secret, so the network the
-    /// container stands in, and the root each session names, are the whole of its access control.
+    /// container stands in, and the root each session names inside the configured volume, are the whole of its access
+    /// control. The endpoint is mapped as Snail.Sdk.Mcp.Http maps it, behind the refusal of every request a browser makes:
+    /// a page open on the machine, or a name rebound to it, would otherwise reach a reader of files with no token.
     /// </remarks>
     internal static WebApplication Listening(string[] args, ServerConfig config, IConfiguration settings)
     {
@@ -44,7 +47,7 @@ public static class McpServerHost
         app.Urls.Add($"http://*:{config.Port}");
         app.MapGet(HealthPath, () => Results.Ok());
         app.RefuseASessionItCannotServe();
-        app.MapMcp(Path);
+        app.MapLocalMcp(Path);
 
         return app;
     }

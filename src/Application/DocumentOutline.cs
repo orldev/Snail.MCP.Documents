@@ -20,7 +20,7 @@ public sealed class DocumentOutline(DocumentOpening opening)
         ["path"] = path,
         ["kind"] = document.Format.ToString(),
         ["characters"] = document.Text.Length,
-        ["parts"] = new JsonArray([.. document.Parts.Select(part => (JsonNode)new JsonObject
+        ["parts"] = new JsonArray([.. document.Parts.Take(Limits.MostParts).Select(part => (JsonNode)new JsonObject
         {
             ["kind"] = part.Kind.ToString(),
             ["number"] = part.Number,
@@ -29,14 +29,15 @@ public sealed class DocumentOutline(DocumentOpening opening)
             ["characters"] = part.Length,
             ["isScan"] = part.IsScanned ? true : null
         })]),
+        ["partsNotListed"] = NotListed(document.Parts.Count, Limits.MostParts),
         ["headings"] = new JsonArray([.. document.Headings.Take(Limits.MostHeadings).Select(heading => (JsonNode)new JsonObject
         {
             ["level"] = heading.Level,
             ["title"] = heading.Title,
             ["from"] = heading.Start
         })]),
-        ["headingsNotListed"] = document.Headings.Count > Limits.MostHeadings ? document.Headings.Count - Limits.MostHeadings : null,
-        ["tables"] = new JsonArray([.. document.Tables.Select(table => (JsonNode)new JsonObject
+        ["headingsNotListed"] = NotListed(document.Headings.Count, Limits.MostHeadings),
+        ["tables"] = new JsonArray([.. document.Tables.Take(Limits.MostTables).Select(table => (JsonNode)new JsonObject
         {
             ["number"] = table.Number,
             ["title"] = table.Title,
@@ -44,6 +45,9 @@ public sealed class DocumentOutline(DocumentOpening opening)
             ["rows"] = table.Rows.Count,
             ["columns"] = table.Columns,
             ["from"] = table.Start
-        })])
+        })]),
+        ["tablesNotListed"] = NotListed(document.Tables.Count, Limits.MostTables)
     };
+
+    private static int? NotListed(int count, int most) => count > most ? count - most : null;
 }

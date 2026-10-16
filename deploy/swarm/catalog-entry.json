@@ -7,7 +7,7 @@
   "path": "/mcp?root={workspace}",
   "args": [],
   "secrets": [],
-  "notes": "own server: repository mcp/Snail.MCP.Documents, a container with streamable HTTP. Runs ONE PER MACHINE beside mcp-filesystem and mounts the volume of working copies READ-ONLY. The session address names the copy: {workspace} is put into the path before the step; task attachments are under .swarm/attachments. A session for a copy this machine does not have is refused at the door. Three tools, all read-only: documents_outline (what is inside), documents_read (the text in pieces, pages, sheets and slides marked), documents_table (a table row by row). PDF scans are marked but not recognized: a vision model reads them. Files over 50 MB are not opened.",
+  "notes": "own server: repository mcp/Snail.MCP.Documents, a container with streamable HTTP. Runs ONE PER MACHINE beside mcp-filesystem and mounts the volume of working copies READ-ONLY. The session address names the copy: {workspace} is put into the path before the step; task attachments are under .swarm/attachments. A session for a copy this machine does not have, or for a folder outside /workspaces, is refused at the door; a browser request (an Origin header) gets 403. Three tools, all read-only: documents_outline (what is inside), documents_read (the text in pieces, pages, sheets and slides marked), documents_table (a table row by row). PDF scans are marked but not recognized: a vision model reads them. Files over 50 MB are not opened.",
   "env": {},
   "requires": "The machine's volume of working copies at /workspaces, read-only"
 }

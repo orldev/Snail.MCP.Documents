@@ -69,6 +69,20 @@ public sealed class HttpContractTests : IDisposable
         Assert.Contains("was not granted", refused.Text(), StringComparison.Ordinal);
     }
 
+    /// <summary>A failure nobody foresaw names itself; the protocol's own «an error occurred» tells the model nothing to act on.</summary>
+    [Fact]
+    public async Task Call_WithAnArgumentOfTheWrongType_IsAnsweredWithWhatFailed()
+    {
+        _copy.Write("a.txt", "x");
+        await using var server = await ListeningServer.StartAsync(("PORT", "0"));
+        await using var client = await server.ConnectAsync($"?root={_copy.Root}");
+
+        var answer = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "a.txt", ["from"] = "the start" });
+
+        Assert.Equal(true, answer.IsError);
+        Assert.StartsWith("documents_read failed inside the server", JsonNode.Parse(answer.Text())!["error"]!.GetValue<string>(), StringComparison.Ordinal);
+    }
+
     /// <summary>The text is paid for once: a structured copy beside it would hand a model every piece twice.</summary>
     [Fact]
     public async Task Answer_OfAnyTool_CarriesItsPayloadOnce()
