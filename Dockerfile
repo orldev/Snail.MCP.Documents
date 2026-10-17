@@ -12,15 +12,23 @@
 # refuse the build. The server is native: published for linux-x64 the SDK compiles it ahead of time (Native AOT), which
 # needs clang and zlib in the build stage, and the image runs the one executable on runtime-deps, with no .NET runtime
 # in it — a smaller image and a faster start.
+#
+# VERSION is the release's when the shared mcp-image.yml builds the image (0.0.0-<branch>.<commit> from a branch)
+# and 0.0.0-local otherwise: the server reports it in initialize and the image carries it as its OCI version.
+ARG VERSION=0.0.0-local
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0.302 AS build
+ARG VERSION
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends clang zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /source
 COPY . .
-RUN dotnet publish src/Snail.MCP.Documents.csproj -c Release -r linux-x64 -o /app
+RUN dotnet publish src/Snail.MCP.Documents.csproj -c Release -r linux-x64 -o /app -p:Version=$VERSION
 
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
+ARG VERSION
+LABEL org.opencontainers.image.version=$VERSION
 WORKDIR /app
 COPY --from=build /app .
 
