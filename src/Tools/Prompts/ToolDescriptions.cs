@@ -12,7 +12,8 @@ public static class ToolDescriptions
     public const string Read =
         """
         Read a document as Markdown: Word, Excel, PowerPoint, PDF, HTML, CSV, JSON, Markdown or plain text. Headings,
-        lists and tables keep their shape, and each page, sheet and slide begins with a marked heading. A long
+        lists and tables keep their shape, and each page, sheet and slide begins with a marked heading; a sheet's
+        table carries the letters of its columns and the numbers of its rows, so a value is named by its cell. A long
         text comes in pieces: next is the position to pass as from for the following piece, and null when the
         document has ended. To start at a page, sheet or slide, pass its number as part instead of from. A PDF
         page with no text layer is listed under scans: its words are not in the text.

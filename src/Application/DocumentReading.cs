@@ -40,7 +40,7 @@ public sealed class DocumentReading(DocumentOpening opening)
         return new JsonObject
         {
             ["path"] = path,
-            ["kind"] = document.Format.ToString(),
+            ["kind"] = document.Kind.ToString(),
             ["characters"] = new JsonObject { ["from"] = from, ["returned"] = text.Length, ["total"] = document.Text.Length },
             ["next"] = end < document.Text.Length ? end : null,
             ["parts"] = covered.Count == 0 ? null : new JsonArray([.. covered.Select(part => (JsonNode)new JsonObject

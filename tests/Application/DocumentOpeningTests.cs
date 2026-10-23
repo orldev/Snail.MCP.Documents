@@ -1,9 +1,7 @@
 using Microsoft.Extensions.Time.Testing;
 using Snail.MCP.Documents.Adapters;
 using Snail.MCP.Documents.Application;
-using Snail.MCP.Documents.Application.Ports;
 using Snail.MCP.Documents.Configuration;
-using Snail.MCP.Documents.Domain;
 
 namespace Snail.MCP.Documents.Tests.Application;
 
@@ -23,17 +21,17 @@ public sealed class DocumentOpeningTests : IDisposable
         _copy.Write("busy.slow", "x");
         var config = new ServerConfig { Roots = [_copy.Root] };
         var disk = new LocalDisk();
-        var opening = new DocumentOpening(new SessionRoots(config, new StdioAddress(), disk), [new EndlessReader()], new DocumentMemory(config, _clock), config, disk, _clock);
+        var opening = new DocumentOpening(new SessionRoots(config, new StdioAddress(), disk), new DocumentReader([new EndlessReader()], _clock), new DocumentMemory(config, _clock), config, disk, _clock);
 
         var opened = opening.OpenAsync("busy.slow");
 
         while (!opened.IsCompleted)
         {
-            _clock.Advance(TimeSpan.FromSeconds(Limits.MostReadingSeconds));
+            _clock.Advance(TimeSpan.FromSeconds(ReadingLimits.MostReadingSeconds));
             await Task.WhenAny(opened, Task.Delay(TimeSpan.FromMilliseconds(20)));
         }
 
-        Assert.Equal($"the file took more than {Limits.MostReadingSeconds} seconds to read and was not read to the end", (await opened).Error);
+        Assert.Equal($"the file took more than {ReadingLimits.MostReadingSeconds} seconds to read and was not read to the end", (await opened).Error);
     }
 
     /// <summary>
@@ -47,7 +45,7 @@ public sealed class DocumentOpeningTests : IDisposable
         var reader = new SlowReader();
         var config = new ServerConfig { Roots = [_copy.Root] };
         var disk = new LocalDisk();
-        var opening = new DocumentOpening(new SessionRoots(config, new StdioAddress(), disk), [reader], new DocumentMemory(config, TimeProvider.System), config, disk, TimeProvider.System);
+        var opening = new DocumentOpening(new SessionRoots(config, new StdioAddress(), disk), new DocumentReader([reader]), new DocumentMemory(config, TimeProvider.System), config, disk, TimeProvider.System);
 
         await Task.WhenAll(Enumerable.Range(0, 16).Select(_ => Task.Run(() => opening.OpenAsync("report.slow"))));
 
@@ -60,7 +58,7 @@ public sealed class DocumentOpeningTests : IDisposable
 
         public int Reads => _reads;
 
-        public DocumentKind Format => DocumentKind.Text;
+        public DocumentKind Kind => DocumentKind.Text;
 
         public IReadOnlyList<string> Extensions { get; } = [".slow"];
 
@@ -75,7 +73,7 @@ public sealed class DocumentOpeningTests : IDisposable
 
     private sealed class EndlessReader : IFormatReader
     {
-        public DocumentKind Format => DocumentKind.Text;
+        public DocumentKind Kind => DocumentKind.Text;
 
         public IReadOnlyList<string> Extensions { get; } = [".slow"];
 

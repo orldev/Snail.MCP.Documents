@@ -1,11 +1,10 @@
-using System.Xml;
 using Snail.MCP.Documents.Application.Prompts;
 using Snail.MCP.Documents.Configuration;
 
 namespace Snail.MCP.Documents.Application;
 
 /// <summary>Brings a file of the session into memory as a document: inside the root, under the size limit, in a format read here.</summary>
-public sealed class DocumentOpening(SessionRoots roots, IEnumerable<IFormatReader> readers, DocumentMemory memory, ServerConfig config, IDisk disk, TimeProvider clock)
+public sealed class DocumentOpening(SessionRoots roots, DocumentReader reader, DocumentMemory memory, ServerConfig config, IDisk disk, TimeProvider clock)
 {
     /// <summary>The document at <paramref name="path"/>, or why it cannot be read.</summary>
     public async Task<Opened> OpenAsync(string? path, CancellationToken cancellationToken = default)
@@ -35,41 +34,40 @@ public sealed class DocumentOpening(SessionRoots roots, IEnumerable<IFormatReade
         if (stamp.Length > config.MaxFileBytes)
             return Opened.Refused(Messages.TooLarge(stamp.Length, config.MaxFileBytes), Messages.TooLargeHint);
 
-        string extension = Path.GetExtension(path).ToLowerInvariant();
-        if (readers.FirstOrDefault(reader => reader.Extensions.Contains(extension, StringComparer.Ordinal)) is not { } reader)
-            return Opened.Refused(Messages.Unknown(extension), Messages.UnknownHint);
+        if (reader.ReaderFor(path) is not { } format)
+            return Opened.Refused(Messages.Unknown(Path.GetExtension(path).ToLowerInvariant()), Messages.UnknownHint);
 
-        return await memory.OnceAsync(path, stamp, () => ReadAsync(path, reader), cancellationToken);
+        return await memory.OnceAsync(path, stamp, () => ReadAsync(path, format.Kind), cancellationToken);
     }
 
-    /// <summary>The file brought into memory and read by its format, within <see cref="Limits.MostReadingSeconds"/>.</summary>
+    /// <summary>The file brought into memory and read by its format, within <see cref="ReadingLimits.MostReadingSeconds"/>.</summary>
     /// <remarks>
     /// Not cancelled by the call that started it, since every call for the same file shares this read; stopped by its own
-    /// deadline instead, so that a file built to keep a parser busy costs half a minute of one thread and no more.
+    /// deadline instead, so that a file built to keep a parser busy costs half a minute of one thread and no more. The disk
+    /// is held to the same deadline as the reading, which the library holds to it once the bytes are in memory.
     /// </remarks>
-    private async Task<Opened> ReadAsync(string path, IFormatReader reader)
+    private async Task<Opened> ReadAsync(string path, DocumentKind format)
     {
-        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(Limits.MostReadingSeconds), clock);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(ReadingLimits.MostReadingSeconds), clock);
 
         try
         {
             await using var content = await disk.ReadAsync(path, config.MaxFileBytes, deadline.Token);
-            var blocks = await reader.ReadAsync(content, deadline.Token);
-            var document = Markdown.Of(reader.Format, blocks);
+            var reading = await reader.ReadAsync(content, path);
 
-            return Opened.Of(document);
-        }
-        catch (DocumentTooLargeException failure)
-        {
-            return Opened.Refused(Messages.TooLargeOnceRead(failure.Message), Messages.TooLargeHint);
+            return reading.TryGetDocument(out var document) ? Opened.Of(document) : Refused(reading.Failure.Value, reading.Reason, format);
         }
         catch (OperationCanceledException) when (deadline.IsCancellationRequested)
         {
-            return Opened.Refused(Messages.TooSlow(Limits.MostReadingSeconds), Messages.TooLargeHint);
-        }
-        catch (Exception failure) when (failure is InvalidDataException or XmlException)
-        {
-            return Opened.Refused(Messages.Damaged(reader.Format.ToString(), failure.Message), Messages.DamagedHint);
+            return Opened.Refused(Messages.TooSlow(ReadingLimits.MostReadingSeconds), Messages.TooLargeHint);
         }
     }
+
+    private static Opened Refused(ReadingFailure failure, string reason, DocumentKind format) => failure switch
+    {
+        ReadingFailure.TooLarge => Opened.Refused(Messages.TooLargeOnceRead(reason), Messages.TooLargeHint),
+        ReadingFailure.TooSlow => Opened.Refused(Messages.TooSlow(ReadingLimits.MostReadingSeconds), Messages.TooLargeHint),
+        ReadingFailure.Locked => Opened.Refused(Messages.Locked(reason), Messages.LockedHint),
+        _ => Opened.Refused(Messages.Damaged(format.ToString(), reason), Messages.DamagedHint)
+    };
 }

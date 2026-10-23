@@ -27,7 +27,7 @@ public static class Messages
         $"'{extension}' is not a format this server reads";
 
     /// <summary>What this server reads instead, for a caller that named something else.</summary>
-    public const string UnknownHint = "It reads .docx, .xlsx, .pptx, .pdf, .html, .htm, .csv, .tsv, .json, .md and .txt; an older .doc, .xls or .ppt has to be saved in the newer format first.";
+    public const string UnknownHint = "It reads .docx, .xlsx, .xls, .pptx, .pdf, .html, .htm, .csv, .tsv, .json, .md and .txt; an older .doc or .ppt has to be saved in the newer format first.";
 
     /// <summary>A file that claims a format and is not in it.</summary>
     public static string Damaged(string format, string why) =>
@@ -35,6 +35,13 @@ public static class Messages
 
     /// <summary>What to do about a damaged file.</summary>
     public const string DamagedHint = "The file is damaged or is not what its name says. Ask for it again rather than retrying the read.";
+
+    /// <summary>A file protected by a password.</summary>
+    public static string Locked(string why) =>
+        $"the file is protected by a password: {why}";
+
+    /// <summary>What to do about a file under a password.</summary>
+    public const string LockedHint = "Ask for the document without its password, or for an export of it; retrying the read will not open it.";
 
     /// <summary>A file that is there and could not be opened.</summary>
     public static string Unreadable(string why) =>

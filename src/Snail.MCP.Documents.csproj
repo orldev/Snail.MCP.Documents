@@ -1,7 +1,8 @@
 <Project Sdk="Snail.Sdk.Mcp">
 
     <!--
-        Native, as Snail.MCP.CleanUp: OpenXml, PdfPig and AngleSharp publish without a trim or AOT warning, and every
+        Native, as Snail.MCP.CleanUp: Snail.Toolkit.Documents and the OpenXml, PdfPig, ExcelDataReader and AngleSharp under it
+        publish without a trim or AOT warning, and every
         format is read over stdio and over HTTP by the native program. A platform tool per system, a portable one for
         the rest; on this Mac `dotnet publish src -c Release -r osx-arm64 -p:SnailMcpInstall=true`. The container is native
         too: its Dockerfile publishes for linux-x64.
@@ -14,18 +15,16 @@
 
     <PropertyGroup>
         <Version>0.1.0</Version>
-        <Description>MCP server that lets AI agents read the documents of a task as Markdown: Word, Excel, PowerPoint, the text of a PDF, HTML, CSV, JSON and plain text, in pieces with their pages, sheets and slides marked, an outline to find a place by, and tables row by row. Reads only, inside the folder a session names.</Description>
-        <PackageTags>mcp;mcp-server;modelcontextprotocol;ai;claude;documents;docx;xlsx;pptx;pdf;markdown;dotnet-tool</PackageTags>
+        <Description>MCP server that lets AI agents read the documents of a task as Markdown: Word, Excel (.xls too), PowerPoint, the text of a PDF, HTML, CSV, JSON and plain text, in pieces with their pages, sheets and slides marked, an outline to find a place by, and tables row by row. Reads only, inside the folder a session names.</Description>
+        <PackageTags>mcp;mcp-server;modelcontextprotocol;ai;claude;documents;docx;xlsx;xls;pptx;pdf;markdown;dotnet-tool</PackageTags>
         <PackageProjectUrl>https://github.com/orldev/Snail.MCP.Documents</PackageProjectUrl>
         <RepositoryUrl>https://github.com/orldev/Snail.MCP.Documents</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AngleSharp"/>
-        <PackageReference Include="DocumentFormat.OpenXml"/>
         <PackageReference Include="ModelContextProtocol"/>
         <PackageReference Include="ModelContextProtocol.AspNetCore"/>
-        <PackageReference Include="PdfPig"/>
+        <PackageReference Include="Snail.Toolkit.Documents"/>
     </ItemGroup>
 
     <ItemGroup>

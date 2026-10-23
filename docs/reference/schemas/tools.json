@@ -1,7 +1,7 @@
 [
   {
     "name": "documents_read",
-    "description": "Read a document as Markdown: Word, Excel, PowerPoint, PDF, HTML, CSV, JSON, Markdown or plain text. Headings,\nlists and tables keep their shape, and each page, sheet and slide begins with a marked heading. A long\ntext comes in pieces: next is the position to pass as from for the following piece, and null when the\ndocument has ended. To start at a page, sheet or slide, pass its number as part instead of from. A PDF\npage with no text layer is listed under scans: its words are not in the text.",
+    "description": "Read a document as Markdown: Word, Excel, PowerPoint, PDF, HTML, CSV, JSON, Markdown or plain text. Headings,\nlists and tables keep their shape, and each page, sheet and slide begins with a marked heading; a sheet\u0027s\ntable carries the letters of its columns and the numbers of its rows, so a value is named by its cell. A long\ntext comes in pieces: next is the position to pass as from for the following piece, and null when the\ndocument has ended. To start at a page, sheet or slide, pass its number as part instead of from. A PDF\npage with no text layer is listed under scans: its words are not in the text.",
     "inputSchema": {
       "type": "object",
       "properties": {

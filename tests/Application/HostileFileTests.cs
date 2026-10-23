@@ -1,8 +1,5 @@
-using System.Diagnostics;
 using System.IO.Compression;
-using System.Text;
 using DocumentFormat.OpenXml.Packaging;
-using Snail.MCP.Documents.Adapters;
 using Snail.MCP.Documents.Domain;
 using S = DocumentFormat.OpenXml.Spreadsheet;
 using W = DocumentFormat.OpenXml.Wordprocessing;
@@ -78,7 +75,7 @@ public sealed class HostileFileTests : IDisposable
 
         var answer = await reading.Documents.ReadAsync("deep.docx", 0, null, Limits.DefaultCharacters);
 
-        Assert.Equal($"{new string(' ', Limits.MostListDepth * 2)}1. item", answer.Data!["text"]!.GetValue<string>());
+        Assert.Equal($"{new string(' ', ReadingLimits.MostListDepth * 2)}1. item", answer.Data!["text"]!.GetValue<string>());
     }
 
     /// <summary>A valid package around a broken part fails only when the part is first read, as an <c>XmlException</c>; it is still a damaged file.</summary>
@@ -105,21 +102,6 @@ public sealed class HostileFileTests : IDisposable
         Assert.InRange(outline.ToJsonString().Length, 0, Limits.MostCharacters);
     }
 
-    /// <summary>
-    /// The separator of a Markdown table opens with two runs of spaces around an optional bar; backtracking tried every
-    /// split of them, and a row followed by 40 000 spaces took 22 s. Five seconds, not one: the bound tells 22 s from
-    /// milliseconds, and a tighter one fails under a parallel run for reasons that are not the regex.
-    /// </summary>
-    [Fact]
-    public async Task Markdown_RowFollowedByALongLineOfSpaces_IsReadInSeconds()
-    {
-        byte[] page = Encoding.UTF8.GetBytes($"| a |\n{new string(' ', 40_000)}x");
-        var clock = Stopwatch.StartNew();
-
-        await new MarkdownReader().ReadAsync(new MemoryStream(page));
-
-        Assert.InRange(clock.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(5));
-    }
 
     /// <summary>A file that passes every check and then cannot be opened is answered with the reason, not with the SDK's «an error occurred».</summary>
     [Fact]

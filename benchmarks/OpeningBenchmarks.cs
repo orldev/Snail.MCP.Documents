@@ -2,6 +2,7 @@ using BenchmarkDotNet.Attributes;
 using Snail.MCP.Documents.Adapters;
 using Snail.MCP.Documents.Application;
 using Snail.MCP.Documents.Configuration;
+using Snail.Toolkit.Documents;
 
 namespace Snail.MCP.Documents.Benchmarks;
 
@@ -23,7 +24,7 @@ public class OpeningBenchmarks
 
         var config = new ServerConfig { Roots = [_copy], MemoryMinutes = 0 };
         var disk = new LocalDisk();
-        _opening = new DocumentOpening(new SessionRoots(config, new StdioAddress(), disk), [new DelimitedReader(), new WordReader()], new DocumentMemory(config, TimeProvider.System), config, disk, TimeProvider.System);
+        _opening = new DocumentOpening(new SessionRoots(config, new StdioAddress(), disk), DocumentReader.Every, new DocumentMemory(config, TimeProvider.System), config, disk, TimeProvider.System);
     }
 
     [GlobalCleanup]

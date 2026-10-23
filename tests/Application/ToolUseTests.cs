@@ -25,6 +25,31 @@ public sealed class ToolUseTests : IDisposable
         Assert.Null(second["next"]);
     }
 
+    /// <summary>An older .xls reads like a workbook of the newer format, each value under the cell it is in.</summary>
+    [Fact]
+    public async Task Read_WorkbookOfTheOlderFormat_NamesEveryCellWhereItStands()
+    {
+        _copy.Write("invoices.xls", Samples.OldExcel());
+        using var reading = new Reading(_copy.Root);
+
+        string text = (await reading.Documents.ReadAsync("invoices.xls", 0, null, Limits.DefaultCharacters)).Data!["text"]!.GetValue<string>();
+
+        Assert.Contains("|  | B | C | D |", text, StringComparison.Ordinal);
+        Assert.Contains("| 5 | INV-8 |  | 42 |", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>A PDF under a password is said to be locked, so the caller asks for it without one instead of asking for it again.</summary>
+    [Fact]
+    public async Task Read_PdfUnderAPassword_SaysItIsLocked()
+    {
+        _copy.Write("locked.pdf", Samples.LockedPdf());
+        using var reading = new Reading(_copy.Root);
+
+        var answer = await reading.Documents.ReadAsync("locked.pdf", 0, null, Limits.DefaultCharacters);
+
+        Assert.StartsWith("the file is protected by a password", answer.Error, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Read_FromAPart_StartsAtThatSheetAndNamesIt()
     {

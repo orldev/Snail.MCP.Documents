@@ -15,4 +15,8 @@
         <ProjectReference Include="..\src\Snail.MCP.Documents.csproj"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <None Include="Support/invoices.xls" CopyToOutputDirectory="PreserveNewest"/>
+    </ItemGroup>
+
 </Project>

@@ -27,21 +27,26 @@ Things about the answers that are deliberate:
 - **A scan is said to be one.** A PDF page with pictures and no text layer is marked in the text and listed
   under `scans`: its words are not here, and reading them takes a model that sees pictures.
 - **Dates and numbers read as the document shows them.** A spreadsheet date is a number in the file and is
-  known by its cell's format; numbers are written to 15 significant digits, as Excel shows them.
+  known by its cell's format; numbers are written to 15 significant digits, as Excel shows them. A sheet's table
+  carries the letters of its columns and the numbers of its rows, so a value is quoted with the cell it is in.
 - **Headings are found by the style's name**, not its id, so a document from a Russian or German Word has its
   headings too. A CSV in Windows-1251 with semicolons, as a Russian Excel saves one, reads as text, not noise.
 - **What a file becomes is bounded, not only what it weighs.** A file that unpacks to more than 20 000 000
   characters of text, or to a table of more than 1 000 000 cells counting the padding of short rows, is refused as
-  too large once read; reading one file stops after 30 seconds. A sparse workbook of 11 kB used to unpack to
-  98 million characters.
+  too large once read, as is an Office file that would unpack past 256 MB or a hundred times its size; reading one
+  file stops after 30 seconds. A sparse workbook of 11 kB used to unpack to 98 million characters. A file under a
+  password is said to be locked, not damaged.
 - **The outline stays short.** Parts, headings and tables are each listed up to 300, with the count of the rest.
 - **Only regular files are read, and never through a link that appeared after the path was checked.** A named pipe,
   a device or a path swapped for a link between the check and the open is refused with its reason.
 
+The formats are read by [Snail.Toolkit.Documents](https://github.com/orldev/Snail.Toolkit.Documents), the library the
+platform's worker reads documents with too, so an agent sees the same text through either.
+
 | Format | Extensions | Parts | Tables |
 | --- | --- | --- | --- |
 | Word | `.docx`, `.docm` | — | the document's tables |
-| Excel | `.xlsx`, `.xlsm` | sheets | one per sheet |
+| Excel | `.xlsx`, `.xlsm`, `.xls` | sheets | one per sheet, its cells under their addresses |
 | PowerPoint | `.pptx`, `.pptm` | slides, titled; notes read as `Notes:` | the slides' tables |
 | PDF | `.pdf` | pages; scans marked | — |
 | HTML | `.html`, `.htm` | — | the page's tables |

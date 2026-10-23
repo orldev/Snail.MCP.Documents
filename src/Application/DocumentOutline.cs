@@ -18,7 +18,7 @@ public sealed class DocumentOutline(DocumentOpening opening)
     internal static JsonObject Described(string path, Document document) => new()
     {
         ["path"] = path,
-        ["kind"] = document.Format.ToString(),
+        ["kind"] = document.Kind.ToString(),
         ["characters"] = document.Text.Length,
         ["parts"] = new JsonArray([.. document.Parts.Take(Limits.MostParts).Select(part => (JsonNode)new JsonObject
         {
@@ -30,13 +30,13 @@ public sealed class DocumentOutline(DocumentOpening opening)
             ["isScan"] = part.IsScanned ? true : null
         })]),
         ["partsNotListed"] = NotListed(document.Parts.Count, Limits.MostParts),
-        ["headings"] = new JsonArray([.. document.Headings.Take(Limits.MostHeadings).Select(heading => (JsonNode)new JsonObject
+        ["headings"] = new JsonArray([.. document.Sections.Take(Limits.MostHeadings).Select(section => (JsonNode)new JsonObject
         {
-            ["level"] = heading.Level,
-            ["title"] = heading.Title,
-            ["from"] = heading.Start
+            ["level"] = section.Level,
+            ["title"] = section.Title,
+            ["from"] = section.Start
         })]),
-        ["headingsNotListed"] = NotListed(document.Headings.Count, Limits.MostHeadings),
+        ["headingsNotListed"] = NotListed(document.Sections.Count, Limits.MostHeadings),
         ["tables"] = new JsonArray([.. document.Tables.Take(Limits.MostTables).Select(table => (JsonNode)new JsonObject
         {
             ["number"] = table.Number,
