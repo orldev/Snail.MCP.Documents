@@ -49,7 +49,7 @@ public sealed class StdioContractTests : IDisposable
 
         var answer = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "a.md" });
 
-        Assert.NotEqual(true, answer.IsError);
+        Assert.True(answer.IsError != true, answer.Text());
         Assert.Equal("# Заголовок\n\nтекст", answer.Data()["text"]!.GetValue<string>());
     }
 
@@ -81,7 +81,7 @@ public sealed class StdioContractTests : IDisposable
 
         var read = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = name });
 
-        Assert.NotEqual(true, read.IsError);
+        Assert.True(read.IsError != true, read.Text());
         Assert.False(string.IsNullOrWhiteSpace(read.Data()["text"]?.GetValue<string>()), name);
     }
 
@@ -98,7 +98,7 @@ public sealed class StdioContractTests : IDisposable
         var answer = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "deep.html" });
         var listed = await client.ListToolsAsync();
 
-        Assert.NotEqual(true, answer.IsError);
+        Assert.True(answer.IsError != true, answer.Text());
         Assert.NotEmpty(listed);
     }
 

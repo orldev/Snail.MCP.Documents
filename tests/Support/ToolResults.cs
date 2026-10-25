@@ -1,13 +1,11 @@
 using ModelContextProtocol.Protocol;
+using Snail.Sdk.Mcp.Testing;
 
 namespace Snail.MCP.Documents.Tests.Support;
 
-/// <summary>Reads a tool result the way a model does: the text, and the JSON inside it.</summary>
+/// <summary>Reads a tool result the way a model does: the JSON inside its text.</summary>
 internal static class ToolResults
 {
-    public static string Text(this CallToolResult result) =>
-        string.Join(string.Empty, result.Content.OfType<TextContentBlock>().Select(block => block.Text));
-
     public static JsonNode Data(this CallToolResult result) =>
         JsonNode.Parse(result.Text())!["data"]!;
 }

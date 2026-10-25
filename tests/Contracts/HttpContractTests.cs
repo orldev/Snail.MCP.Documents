@@ -1,5 +1,6 @@
 using Snail.MCP.Documents.Tools.Prompts;
 using Snail.Sdk.Mcp.Hosting;
+using Snail.Sdk.Mcp.Testing;
 
 namespace Snail.MCP.Documents.Tests.Contracts;
 
