@@ -10,6 +10,12 @@
     <PropertyGroup>
         <SnailMcpTransport>Both</SnailMcpTransport>
         <SnailMcpContainer>true</SnailMcpContainer>
+        <!--
+            Native without a runtime too, as a server with no image is: the SDK leaves PublishAot off for a container
+            that publishes framework-dependent, and without it the package pointing at the platform ones fails to pack.
+            The Dockerfile publishes for linux-x64, natively, either way.
+        -->
+        <PublishAot Condition="'$(PublishAot)' == ''">true</PublishAot>
         <DebugType Condition="'$(PublishAot)' == 'true' and '$(Configuration)' == 'Release'">none</DebugType>
     </PropertyGroup>
 
