@@ -66,6 +66,15 @@ public sealed class LocalDiskTests : IDisposable
         Assert.Contains("not a regular file", failure.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>Every path ends at a root; on Windows asking <c>C:\</c> whether it is a link threw, and no file was read.</summary>
+    [Fact]
+    public void Real_TheRootOfTheDisk_IsItself()
+    {
+        string root = Path.GetPathRoot(Path.GetTempPath())!;
+
+        Assert.Equal(root, new LocalDisk().Real(root));
+    }
+
     [Fact]
     public async Task ReadAsync_AFileLargerThanItMayBe_IsRefusedAsTooLarge()
     {

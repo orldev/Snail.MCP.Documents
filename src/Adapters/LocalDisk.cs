@@ -82,15 +82,16 @@ public sealed class LocalDisk : IDisk
         return content;
     }
 
+    /// <remarks>A root is never a link, and is not asked: Windows answers the question about <c>C:\</c> with an exception.</remarks>
     private static string Resolved(string existing)
     {
-        if (Link(existing) is { } target)
-            return Resolved(target);
-
         string? parent = Path.GetDirectoryName(existing);
 
         if (string.IsNullOrEmpty(parent) || parent == existing)
             return existing;
+
+        if (Link(existing) is { } target)
+            return Resolved(target);
 
         string real = Resolved(parent);
 
