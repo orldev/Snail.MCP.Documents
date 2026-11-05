@@ -25,6 +25,7 @@ public sealed class HttpContractTests : IDisposable
 
         var listed = await client.ListToolsAsync();
 
+        Assert.NotNull(client.ServerInfo);
         Assert.Equal(ServerIdentity.VersionOf(typeof(ServerGuidance).Assembly), client.ServerInfo.Version);
         Assert.Equal(ServerGuidance.Instructions, client.ServerInstructions);
         Assert.Equal(Catalog.Names, [.. listed.Select(tool => tool.Name).Order(StringComparer.Ordinal)]);
