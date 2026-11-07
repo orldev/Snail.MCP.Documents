@@ -9,9 +9,11 @@
 # rather than answered about the wrong folder.
 #
 # The SDK is pinned to the band global.json asks for: on the floating sdk:10.0 a newer feature band would one day
-# refuse the build. The server is native: published for linux-x64 the SDK compiles it ahead of time (Native AOT), which
-# needs clang and zlib in the build stage, and the image runs the one executable on runtime-deps, with no .NET runtime
-# in it — a smaller image and a faster start.
+# refuse the build. The server is native: the SDK compiles it ahead of time (Native AOT), which needs clang and zlib in
+# the build stage, and the image runs the one executable on runtime-deps, with no .NET runtime in it — a smaller image
+# and a faster start. It is compiled for the platform the image is built for (TARGETARCH, which buildx sets: amd64 is
+# linux-x64, arm64 is linux-arm64): ahead-of-time compilation does not cross architectures in the SDK image, so a fixed
+# linux-x64 did not build on an arm64 machine, such as a Mac with Apple silicon.
 #
 # VERSION is the release's when the shared mcp-image.yml builds the image (0.0.0-<branch>.<commit> from a branch)
 # and 0.0.0-local otherwise: the server reports it in initialize and the image carries it as its OCI version.
@@ -19,12 +21,14 @@ ARG VERSION=0.0.0-local
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0.302 AS build
 ARG VERSION
+ARG TARGETARCH
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends clang zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /source
 COPY . .
-RUN dotnet publish src/Snail.MCP.Documents.csproj -c Release -r linux-x64 -o /app -p:Version=$VERSION
+RUN case "$TARGETARCH" in amd64|"") rid=linux-x64 ;; *) rid="linux-$TARGETARCH" ;; esac \
+    && dotnet publish src/Snail.MCP.Documents.csproj -c Release -r "$rid" -o /app -p:Version=$VERSION
 
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
 ARG VERSION
