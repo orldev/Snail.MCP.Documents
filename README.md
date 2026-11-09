@@ -60,8 +60,8 @@ platform's worker reads documents with too, so an agent sees the same text throu
 ### In Docker, one per machine
 
 ```sh
-docker build -t snail/s3l-documents-mcp .
-docker run -p 127.0.0.1:8823:8823 -v workspaces:/workspaces:ro snail/s3l-documents-mcp
+docker build -t s3l-documents-mcp:local .
+docker run -p 127.0.0.1:8823:8823 -v workspaces:/workspaces:ro s3l-documents-mcp:local
 ```
 
 A session opens at `http://host:8823/mcp?root=/workspaces/<copy>` and reads that copy and nothing else. A
@@ -104,7 +104,7 @@ are the variables' names after the prefix, a double underscore nesting, at the r
 | `SNAIL_MCP_DOCUMENTS_PORT` | `0` | Port to answer sessions on; unset — stdio. |
 | `SNAIL_MCP_DOCUMENTS_TRANSPORT`, `SNAIL_MCP_DOCUMENTS_URL` | — | The other way to say it: `Http` with the address to listen on (`http://127.0.0.1:8823/` by default); a port replaces the URL's. |
 | `SNAIL_MCP_DOCUMENTS_LISTENS_ON_EVERY_INTERFACE` | `false` | Refused outside a container, where the server stays on loopback; inside one it listens on every interface anyway. |
-| `SNAIL_MCP_DOCUMENTS_ROOTS__0`, `__1`, … | — | Folders a session that names none may read; when set, a root a session names must lie inside one of them. |
+| `SNAIL_MCP_DOCUMENTS_ROOTS__0`, `__1`, … | — | The volume: folders a session that names none reads, and the only place a root a session names may lie. At an address a server configured with none serves no session — one naming no root and one naming any root are both turned away with 400 — so there it is required; as a program, it reads nothing without one. |
 | `SNAIL_MCP_DOCUMENTS_MAX_FILE_BYTES` | `52428800` | Bytes past which a file is not opened. |
 | `SNAIL_MCP_DOCUMENTS_MEMORY_MINUTES` | `10` | Minutes a read document is remembered; `0` forgets at once. |
 | `SNAIL_MCP_DOCUMENTS_MEMORY_DOCUMENTS` | `8` | Documents remembered at once. |

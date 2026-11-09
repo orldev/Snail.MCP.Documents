@@ -21,7 +21,7 @@
         },
         {
           "name": "SNAIL_MCP_DOCUMENTS_ROOTS__0",
-          "description": "A folder a session that names none may read, the first of a list: further ones are ROOTS__1, ROOTS__2 and so on, and a bare ROOTS sets none. A session at an address names its own with ?root=, which must lie inside one of them when any is set.",
+          "description": "A folder the server reads, the first of a list: further ones are ROOTS__1, ROOTS__2 and so on, and a bare ROOTS sets none. Configured with none, the server reads nothing and names this variable to the caller.",
           "isRequired": false
         },
         {
@@ -62,8 +62,8 @@
         },
         {
           "name": "SNAIL_MCP_DOCUMENTS_ROOTS__0",
-          "description": "A folder a session that names none may read, the first of a list: further ones are ROOTS__1, ROOTS__2 and so on, and a bare ROOTS sets none. A session at an address names its own with ?root=, which must lie inside one of them when any is set.",
-          "isRequired": false
+          "description": "The volume of working copies, the first of a list: further ones are ROOTS__1, ROOTS__2 and so on, and a bare ROOTS sets none. A session names its copy with ?root=, which must lie inside it; configured with none, the server turns every session away, whatever root it names.",
+          "isRequired": true
         },
         {
           "name": "SNAIL_MCP_DOCUMENTS_MAX_FILE_BYTES",

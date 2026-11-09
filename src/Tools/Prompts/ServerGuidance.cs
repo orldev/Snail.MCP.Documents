@@ -23,7 +23,7 @@ public static class ServerGuidance
         A PDF page with no text layer is a scan: it is marked as one and its words are not here. Read such
         pages with a model that sees pictures instead. Everything else this server reads is text.
 
-        Every answer is JSON with an ok flag. When ok is false, read error and hint and change the call
-        instead of repeating it.
+        Every answer is JSON with an ok flag, and a failed call is also flagged isError. When ok is false, read
+        error and hint and fix the call instead of retrying it verbatim; type, when present, names the failure.
         """;
 }

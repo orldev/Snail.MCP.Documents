@@ -8,7 +8,7 @@ name: snail-documents
 services:
   mcp-documents:
     build: ..
-    image: snail/s3l-documents-mcp:latest
+    image: s3l-documents-mcp:local
     ports: [ "127.0.0.1:8823:8823" ]
     volumes: [ "../workspaces:/workspaces:ro" ]
     mem_limit: 512m

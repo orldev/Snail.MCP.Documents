@@ -1,7 +1,15 @@
 # The server as a container: one per machine, standing behind every agent on it.
 #
-#   docker build -t snail/s3l-documents-mcp .
-#   docker run -p 127.0.0.1:8823:8823 -v workspaces:/workspaces:ro snail/s3l-documents-mcp
+#   docker build -t s3l-documents-mcp:local .
+#   docker run -p 127.0.0.1:8823:8823 -v workspaces:/workspaces:ro s3l-documents-mcp:local
+#
+# A build without a tag would be called latest, the name a deployment pulls, and nothing would tell it from a release.
+# So a local build is tagged local; one that should name its commit passes it, since the image sees no git:
+# --build-arg VERSION=0.0.0-local.$(git rev-parse --short HEAD).
+#
+# Until Snail.Sdk 0.5.0 is on nuget.org this image does not build: nuget.config routes Snail.Sdk to the LocalPackages
+# feed of the developer's machine, which the build stage does not have. The release puts nuget.org back as the only
+# source, and the image builds as it is.
 #
 # The volume is the point. This server reads the documents of the working copies, so it runs where the copies
 # are: they are mounted here read-only, and each session names the one it reads through its address —
@@ -35,7 +43,8 @@ ARG VERSION
 LABEL org.opencontainers.image.version=$VERSION
 # tini runs as process 1 and starts the program under it: .NET ends an unhandled exception with SIGABRT, which process
 # 1 of a container ignores, so run as process 1 itself a program that fails at start spins at a full core and never
-# exits, and nothing restarts it. Under tini it exits with 134.
+# exits, and nothing restarts it. Under tini a crash exits with 134; a setting refused at the start is one line on
+# stderr and exit code 1.
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends tini \
     && rm -rf /var/lib/apt/lists/*

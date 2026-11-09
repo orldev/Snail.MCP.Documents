@@ -20,35 +20,35 @@ public static class Messages
         $"the file took more than {seconds} seconds to read and was not read to the end";
 
     /// <summary>What to do about a file too large to open.</summary>
-    public const string TooLargeHint = "Split the document, or read a smaller export of it.";
+    public const string TooLargeHint = "split the document, or read a smaller export of it";
 
     /// <summary>A file of a format nobody here reads.</summary>
     public static string Unknown(string extension) =>
         $"'{extension}' is not a format this server reads";
 
     /// <summary>What this server reads instead, for a caller that named something else.</summary>
-    public const string UnknownHint = "It reads .docx, .xlsx, .xls, .pptx, .pdf, .html, .htm, .csv, .tsv, .json, .md and .txt; an older .doc or .ppt has to be saved in the newer format first.";
+    public const string UnknownHint = "this server reads .docx, .xlsx, .xls, .pptx, .pdf, .html, .htm, .csv, .tsv, .json, .md and .txt; an older .doc or .ppt has to be saved in the newer format first";
 
     /// <summary>A file that claims a format and is not in it.</summary>
     public static string Damaged(string format, string why) =>
         $"the file could not be read as {format}: {why}";
 
     /// <summary>What to do about a damaged file.</summary>
-    public const string DamagedHint = "The file is damaged or is not what its name says. Ask for it again rather than retrying the read.";
+    public const string DamagedHint = "the file is damaged or is not what its name says; ask for it again rather than retrying the read";
 
     /// <summary>A file protected by a password.</summary>
     public static string Locked(string why) =>
         $"the file is protected by a password: {why}";
 
     /// <summary>What to do about a file under a password.</summary>
-    public const string LockedHint = "Ask for the document without its password, or for an export of it; retrying the read will not open it.";
+    public const string LockedHint = "ask for the document without its password, or for an export of it; retrying the read will not open it";
 
     /// <summary>A file that is there and could not be opened.</summary>
     public static string Unreadable(string why) =>
         $"the file could not be opened: {why}";
 
     /// <summary>What to do about a file that could not be opened.</summary>
-    public const string UnreadableHint = "Check that it is a plain file this server may read; a file that is being written or replaced can be read once that is done.";
+    public const string UnreadableHint = "check that it is a plain file this server may read; a file that is being written or replaced can be read once that is done";
 
     /// <summary>A position past the end of the text.</summary>
     public static string FromBeyondTheEnd(int from, int total) =>
@@ -75,8 +75,8 @@ public static class Messages
         $"{tool} failed inside the server ({kind}): {why}";
 
     /// <summary>What to do about a failure inside the server.</summary>
-    public const string FailedHint = "This is a fault of the server, not of the call: other documents still read. Do not repeat this call; report the file instead.";
+    public const string FailedHint = "this is a fault of the server, not of the call, and other documents still read; do not repeat this call, report the file instead";
 
     /// <summary>What to do when the outline is the better first step.</summary>
-    public const string OutlineHint = "Call documents_outline to see the parts and tables there are.";
+    public const string OutlineHint = "call documents_outline to see the parts and tables there are";
 }
