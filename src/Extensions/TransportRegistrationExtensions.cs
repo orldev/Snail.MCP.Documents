@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Snail.MCP.Documents.Application.Prompts;
 using Snail.MCP.Documents.Configuration;
 using Snail.MCP.Documents.Tools;
 using Snail.MCP.Documents.Tools.Prompts;
@@ -37,7 +38,7 @@ public static class TransportRegistrationExtensions
         /// <remarks>
         /// The grant is held where calls arrive rather than inside each tool, and a tool the session was not granted is
         /// left out of its list; the roots are the ones its address names inside the configured volume, and a session with
-        /// none is told which variable configures it.
+        /// none is told which variable configures it. A failure nobody foresaw is worded by <see cref="Explained"/>.
         /// </remarks>
         private IMcpServerBuilder AddMcpTools() =>
             services
@@ -46,10 +47,22 @@ public static class TransportRegistrationExtensions
                     server.ServerInfo = ServerIdentity.Of(typeof(TransportRegistrationExtensions).Assembly);
                     server.ServerInstructions = ServerGuidance.Instructions;
                 })
-                .ExplainFailures()
+                .ExplainFailures(Explained)
                 .WithSessionGrant()
                 .WithSessionRoots(Volumes, roots => roots.RootsSetting = RootsSetting)
                 .WithTools<DocumentTools>();
+    }
+
+    /// <summary>A failure nobody foresaw, named as the server names it: the tool, the kind of failure and its message.</summary>
+    /// <remarks>
+    /// Still <c>internal</c>, and logged with its trace, but not "try once more": a document that broke a reader breaks it
+    /// the same way the next time, so the model is told the fault is the server's and to report the file instead of
+    /// repeating the call, while the other documents still read.
+    /// </remarks>
+    private static void Explained(FailureOptions failures)
+    {
+        failures.Error = static (tool, failure) => Messages.Failed(tool, failure.GetType().Name, failure.Message);
+        failures.Hint = static (_, _) => Messages.FailedHint;
     }
 
     /// <summary>The variable that configures the volume, named to a session that was given no root.</summary>
