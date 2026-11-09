@@ -14,19 +14,19 @@ public sealed class TableReading(DocumentOpening opening)
     public async Task<Answer<JsonObject>> ReadAsync(string path, int table, int fromRow, int maxRows, CancellationToken cancellationToken = default)
     {
         if (Refusal(table, fromRow, maxRows) is { } refusal)
-            return Answer.Failed(refusal);
+            return Answer.Failed(refusal, type: Refusals.Arguments);
 
         var opened = await opening.OpenAsync(path, cancellationToken);
         if (opened.Document is not { } document)
             return opened.Failure;
 
         if (table > document.Tables.Count)
-            return Answer.Failed(Messages.NoSuchTable(table, document.Tables.Count), Messages.OutlineHint);
+            return Answer.Failed(Messages.NoSuchTable(table, document.Tables.Count), Messages.OutlineHint, Refusals.NoSuchTable);
 
         var found = document.Tables[table - 1];
 
         return fromRow > 0 && fromRow >= found.Rows.Count
-            ? Answer.Failed(Messages.RowBeyondTheEnd(fromRow, found.Rows.Count))
+            ? Answer.Failed(Messages.RowBeyondTheEnd(fromRow, found.Rows.Count), type: Refusals.PastTheEnd)
             : Answer.Ok(Described(path, found, fromRow, maxRows));
     }
 

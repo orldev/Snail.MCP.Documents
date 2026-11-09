@@ -117,6 +117,19 @@ public sealed class StdioContractTests : IDisposable
         Assert.Contains("set SNAIL_MCP_DOCUMENTS_ROOTS__0", answer.Hint(), StringComparison.Ordinal);
     }
 
+    /// <summary>A refusal of the server's own reaches a client through the program with its kind as the top-level type.</summary>
+    [Fact]
+    public async Task Read_AsAProgramOfAFormatNobodyReads_IsTypedUnknownFormat()
+    {
+        _copy.Write("old.doc", "x");
+        await using var client = await StartedAsync();
+
+        var answer = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "old.doc" });
+
+        Assert.True(answer.IsError);
+        Assert.Equal("unknownFormat", answer.Type());
+    }
+
     private Task<McpClient> StartedAsync() => StartedAsync([("ROOTS__0", _copy.Root)]);
 
     /// <summary>The program started as a client starts it, with a home of its own and no settings file, and these settings.</summary>

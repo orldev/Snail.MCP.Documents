@@ -25,7 +25,7 @@ public sealed class DocumentOpening(SessionRoots roots, DocumentReader reader, D
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException)
         {
-            return Opened.Refused(Messages.Unreadable(failure.Message), Messages.UnreadableHint);
+            return Opened.Refused(Messages.Unreadable(failure.Message), Messages.UnreadableHint, Refusals.Unreadable);
         }
     }
 
@@ -38,10 +38,10 @@ public sealed class DocumentOpening(SessionRoots roots, DocumentReader reader, D
     {
         var stamp = disk.Stamp(path);
         if (stamp.Length > config.MaxFileBytes)
-            return Opened.Refused(Messages.TooLarge(stamp.Length, config.MaxFileBytes), Messages.TooLargeHint);
+            return Opened.Refused(Messages.TooLarge(stamp.Length, config.MaxFileBytes), Messages.TooLargeHint, Refusals.TooLarge);
 
         if (reader.ReaderFor(path) is not { } format)
-            return Opened.Refused(Messages.Unknown(Path.GetExtension(path).ToLowerInvariant()), Messages.UnknownHint);
+            return Opened.Refused(Messages.Unknown(Path.GetExtension(path).ToLowerInvariant()), Messages.UnknownHint, Refusals.UnknownFormat);
 
         return await memory.OnceAsync(path, stamp, () => ReadAsync(path, format.Kind), cancellationToken);
     }
@@ -65,15 +65,15 @@ public sealed class DocumentOpening(SessionRoots roots, DocumentReader reader, D
         }
         catch (OperationCanceledException) when (deadline.IsCancellationRequested)
         {
-            return Opened.Refused(Messages.TooSlow(ReadingLimits.MostReadingSeconds), Messages.TooLargeHint);
+            return Opened.Refused(Messages.TooSlow(ReadingLimits.MostReadingSeconds), Messages.TooLargeHint, Refusals.Timeout);
         }
     }
 
     private static Opened Refused(ReadingFailure failure, string reason, DocumentKind format) => failure switch
     {
-        ReadingFailure.TooLarge => Opened.Refused(Messages.TooLargeOnceRead(reason), Messages.TooLargeHint),
-        ReadingFailure.TooSlow => Opened.Refused(Messages.TooSlow(ReadingLimits.MostReadingSeconds), Messages.TooLargeHint),
-        ReadingFailure.Locked => Opened.Refused(Messages.Locked(reason), Messages.LockedHint),
-        _ => Opened.Refused(Messages.Damaged(format.ToString(), reason), Messages.DamagedHint)
+        ReadingFailure.TooLarge => Opened.Refused(Messages.TooLargeOnceRead(reason), Messages.TooLargeHint, Refusals.TooLarge),
+        ReadingFailure.TooSlow => Opened.Refused(Messages.TooSlow(ReadingLimits.MostReadingSeconds), Messages.TooLargeHint, Refusals.Timeout),
+        ReadingFailure.Locked => Opened.Refused(Messages.Locked(reason), Messages.LockedHint, Refusals.Locked),
+        _ => Opened.Refused(Messages.Damaged(format.ToString(), reason), Messages.DamagedHint, Refusals.Damaged)
     };
 }

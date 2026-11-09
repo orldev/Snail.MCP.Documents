@@ -34,6 +34,7 @@ public sealed class DocumentOpeningTests : IDisposable
         }
 
         Assert.Equal($"the file took more than {ReadingLimits.MostReadingSeconds} seconds to read and was not read to the end", (await opened).Error);
+        Assert.Equal("timeout", (await opened).Type);
     }
 
     /// <summary>

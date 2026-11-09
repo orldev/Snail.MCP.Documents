@@ -16,8 +16,11 @@ only reads, and only inside the folder a session names.
 | `documents_read` | What does it say? The text as Markdown, a piece at a time, from a position or from the start of a page, sheet or slide. |
 | `documents_table` | What does this table hold? Rows of cells, a page of rows at a time, the header with every page. |
 
-Every answer is JSON with an `ok` flag. A failure carries `error` and a `hint` saying what to do instead; in
-the protocol it is flagged `isError`. A failure nobody foresaw names itself too — the tool, the kind of failure and
+Every answer is JSON with an `ok` flag. A failure carries `error`, a `hint` saying what to do instead and a
+`type` a program branches on; in the protocol it is flagged `isError`. The types: `arguments` (a number outside its
+range), `noSuchPart`, `noSuchTable`, `pastTheEnd` (a position or row past the end), the path's kind from the SDK
+(`outside`, `absent`, `notAFile`, `noRoot` …), `tooLarge`, `timeout` (a file read for more than 30 seconds),
+`unknownFormat`, `damaged`, `locked`, `unreadable`, and `internal` for a fault of the server. A failure nobody foresaw names itself too — the tool, the kind of failure and
 its message — rather than the protocol's bare «an error occurred».
 
 Things about the answers that are deliberate:

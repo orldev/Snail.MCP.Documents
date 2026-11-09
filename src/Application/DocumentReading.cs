@@ -14,19 +14,19 @@ public sealed class DocumentReading(DocumentOpening opening)
     public async Task<Answer<JsonObject>> ReadAsync(string path, int from, int? part, int maxCharacters, CancellationToken cancellationToken = default)
     {
         if (Refusal(from, part, maxCharacters) is { } refusal)
-            return Answer.Failed(refusal);
+            return Answer.Failed(refusal, type: Refusals.Arguments);
 
         var opened = await opening.OpenAsync(path, cancellationToken);
         if (opened.Document is not { } document)
             return opened.Failure;
 
         if (part is { } number && (number > document.Parts.Count))
-            return Answer.Failed(Messages.NoSuchPart(number, document.Parts.Count), Messages.OutlineHint);
+            return Answer.Failed(Messages.NoSuchPart(number, document.Parts.Count), Messages.OutlineHint, Refusals.NoSuchPart);
 
         int start = part is { } wanted ? document.Parts[wanted - 1].Start : from;
 
         return start > 0 && start >= document.Text.Length
-            ? Answer.Failed(Messages.FromBeyondTheEnd(start, document.Text.Length))
+            ? Answer.Failed(Messages.FromBeyondTheEnd(start, document.Text.Length), type: Refusals.PastTheEnd)
             : Answer.Ok(Described(path, document, start, maxCharacters));
     }
 
