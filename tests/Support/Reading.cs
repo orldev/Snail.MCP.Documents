@@ -1,9 +1,9 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Snail.MCP.Documents.Adapters;
 using Snail.MCP.Documents.Application;
 using Snail.MCP.Documents.Configuration;
 using Snail.MCP.Documents.Extensions;
+using Snail.Sdk.Mcp.Hosting.Sessions;
+using Snail.Sdk.Mcp.Testing;
 
 namespace Snail.MCP.Documents.Tests.Support;
 
@@ -18,8 +18,8 @@ internal sealed class Reading : IDisposable
     {
         _services = new ServiceCollection()
             .AddSingleton(new ServerConfig { Roots = [root], MaxFileBytes = maxFileBytes })
-            .AddSingleton<Snail.MCP.Documents.Application.Ports.ISessionAddress, StdioAddress>()
-            .AddReading(new ConfigurationBuilder().Build())
+            .AddSingleton(new SessionRoots(new FixedAddress(), [root]))
+            .AddReading()
             .BuildServiceProvider();
 
         _scope = _services.CreateScope();

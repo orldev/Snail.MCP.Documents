@@ -1,9 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
-using Snail.MCP.Documents.Adapters;
-using Snail.MCP.Documents.Application;
+using Snail.MCP.Documents.Configuration;
 using Snail.MCP.Documents.Tools;
 using Snail.MCP.Documents.Tools.Prompts;
 using Snail.Sdk.Mcp.Hosting;
+using Snail.Sdk.Mcp.Hosting.Sessions;
+using Snail.Sdk.Mcp.Http;
 
 namespace Snail.MCP.Documents.Extensions;
 
@@ -17,12 +18,10 @@ public static class TransportRegistrationExtensions
 {
     extension(IServiceCollection services)
     {
-        /// <summary>The server answering sessions at an address.</summary>
+        /// <summary>The server answering sessions at an address, which names the session's roots and tools.</summary>
         public IServiceCollection AddMcpTransportAtAnAddress()
         {
-            services.AddHttpContextAccessor();
-            services.AddSingleton<ISessionAddress, HttpAddress>();
-            services.AddMcpTools().WithHttpTransport();
+            services.AddMcpTools().WithHttpTransport().WithSessionAddress();
 
             return services;
         }
@@ -30,25 +29,36 @@ public static class TransportRegistrationExtensions
         /// <summary>The server speaking stdio to the process that started it.</summary>
         public IServiceCollection AddMcpTransportAsAProgram()
         {
-            services.AddSingleton<ISessionAddress, StdioAddress>();
             services.AddMcpTools().WithStdioServerTransport();
 
             return services;
         }
 
-        private IMcpServerBuilder AddMcpTools()
-        {
-            services.AddSingleton<SessionGrant>();
-
-            return services
+        /// <remarks>
+        /// The grant is held where calls arrive rather than inside each tool, and a tool the session was not granted is
+        /// left out of its list; the roots are the ones its address names inside the configured volume, and a session with
+        /// none is told which variable configures it.
+        /// </remarks>
+        private IMcpServerBuilder AddMcpTools() =>
+            services
                 .AddMcpServer(server =>
                 {
                     server.ServerInfo = ServerIdentity.Of(typeof(TransportRegistrationExtensions).Assembly);
                     server.ServerInstructions = ServerGuidance.Instructions;
                 })
-                .RefuseWhatWasNotGranted()
                 .ExplainFailures()
+                .WithSessionGrant()
+                .WithSessionRoots(Volumes, roots => roots.RootsSetting = RootsSetting)
                 .WithTools<DocumentTools>();
-        }
     }
+
+    /// <summary>The variable that configures the volume, named to a session that was given no root.</summary>
+    /// <remarks>
+    /// With its index: <c>Roots</c> is a list, and a plain <c>SNAIL_MCP_DOCUMENTS_ROOTS=/path</c> binds to none of it, so a
+    /// hint naming the bare name sent the operator to a setting that leaves the server configured with nothing.
+    /// </remarks>
+    internal const string RootsSetting = "SNAIL_MCP_DOCUMENTS_ROOTS__0";
+
+    /// <summary>The volume the server was configured to serve: the roots a session may name a copy inside, and the ones it reads when it names none.</summary>
+    internal static IReadOnlyList<string> Volumes(IServiceProvider services) => services.GetRequiredService<ServerConfig>().Roots;
 }

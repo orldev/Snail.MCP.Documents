@@ -70,7 +70,9 @@ the server of another machine hears about it at once instead of reading the wron
 a folder outside `/workspaces`, the volume the image is configured with, and a request a browser makes (one that
 carries `Origin`) is refused with 403. The server has no token: the network the container stands in is its access
 control, so publish the port on loopback as above, not on every interface. `GET /healthz` answers 200 while the
-server runs. `deploy/compose.yml` runs it alone over `./workspaces`.
+server runs. A role given some of the tools names them in the address, `&tool=documents_outline` once per tool: a
+tool left out is not listed to the session, and a call to it is refused. `deploy/compose.yml` runs it alone over
+`./workspaces`.
 
 ### As a program
 
@@ -78,7 +80,11 @@ server runs. `deploy/compose.yml` runs it alone over `./workspaces`.
 SNAIL_MCP_DOCUMENTS_ROOTS__0=/path/to/folder dotnet run --project src
 ```
 
-Without a port it speaks stdio to the process that started it and reads inside the configured roots.
+Without a port it speaks stdio to the process that started it and reads inside the configured roots; configured with
+none, it reads nothing and names `SNAIL_MCP_DOCUMENTS_ROOTS__0` as what gives it a root. Given a port outside a
+container, it listens on loopback alone (`127.0.0.1`), and an address beyond loopback — `0.0.0.0`, a LAN address,
+`LISTENS_ON_EVERY_INTERFACE` — stops it at start: there is no token, so the network is its access control. Inside a
+container — the image — it listens on every interface, since a container's published port does not reach its loopback.
 
 ## Configuration
 
@@ -87,7 +93,7 @@ variable wins over the file; nothing else is read. The file is `$SNAIL_MCP_DOCUM
 one read then, or else the first of these that exists: `./.s3l-mcp-documents.json`, `./s3l-mcp-documents.json`,
 `~/.config/s3l-mcp-documents/config.json`, `~/.s3l-mcp-documents.json`. A machine's settings belong in `~/.config/s3l-mcp-documents/config.json`
 (`chmod 600`), never in a launchd job or in a client's registration, which travel wherever they are copied. Its fields
-are the variables' names after the prefix, a double underscore nesting:
+are the variables' names after the prefix, a double underscore nesting, at the root of the file or under `Snail`:
 
 ```json
 { "Roots": ["/path/to/folder"], "MemoryMinutes": 30 }
@@ -96,6 +102,8 @@ are the variables' names after the prefix, a double underscore nesting:
 | Variable | Default | What it sets |
 | --- | --- | --- |
 | `SNAIL_MCP_DOCUMENTS_PORT` | `0` | Port to answer sessions on; unset — stdio. |
+| `SNAIL_MCP_DOCUMENTS_TRANSPORT`, `SNAIL_MCP_DOCUMENTS_URL` | — | The other way to say it: `Http` with the address to listen on (`http://127.0.0.1:8823/` by default); a port replaces the URL's. |
+| `SNAIL_MCP_DOCUMENTS_LISTENS_ON_EVERY_INTERFACE` | `false` | Refused outside a container, where the server stays on loopback; inside one it listens on every interface anyway. |
 | `SNAIL_MCP_DOCUMENTS_ROOTS__0`, `__1`, … | — | Folders a session that names none may read; when set, a root a session names must lie inside one of them. |
 | `SNAIL_MCP_DOCUMENTS_MAX_FILE_BYTES` | `52428800` | Bytes past which a file is not opened. |
 | `SNAIL_MCP_DOCUMENTS_MEMORY_MINUTES` | `10` | Minutes a read document is remembered; `0` forgets at once. |

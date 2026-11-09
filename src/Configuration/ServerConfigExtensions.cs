@@ -24,17 +24,19 @@ public static class ServerConfigExtensions
             .AddServerSettings(Name, file, variables)
             .Build();
 
-    /// <summary>What the settings say the server is, read before there is a host to read it into.</summary>
+    /// <summary>What the settings say the server may read, read before there is a host to read it into.</summary>
     /// <remarks>
-    /// Read first and separately because the answer decides which host is built at all: a port means a
-    /// web host listening for sessions, no port means a console speaking stdio to its parent.
+    /// Read first and separately because a setting out of its range stops the process before any host is built.
     /// </remarks>
     public static ServerConfig Read(IConfiguration settings)
     {
         var config = new ServerConfig();
 
-        settings.GetSection(ServerConfig.SectionName).Bind(config);
-        settings.Bind(config);
+        ServerSettings.Bind(Name, settings, source =>
+        {
+            source.GetSection(ServerConfig.SectionName).Bind(config);
+            source.Bind(config);
+        });
 
         Validate(config);
 
@@ -42,26 +44,33 @@ public static class ServerConfigExtensions
     }
 
     /// <summary>Refuses a setting outside its range at start-up, so a typo stops the process instead of being repaired in silence.</summary>
+    /// <remarks>
+    /// As Snail.Sdk's <see cref="StartRefusedException"/>, which the program says in one line with exit code 1 rather than
+    /// crashing with a trace; each fault names its setting as <c>McpEndpoint</c> names its own, the variable and the key
+    /// of the settings file, so the person who set it finds where.
+    /// </remarks>
     internal static void Validate(ServerConfig config)
     {
         List<string> faults = [];
 
-        if (config.Port is < 0 or > 65535)
-            faults.Add($"Port must be between 0 and 65535, not {config.Port}");
-
         if (config.MaxFileBytes is < 1024 or > 536_870_912)
-            faults.Add($"MaxFileBytes must be between 1024 and 536870912, not {config.MaxFileBytes}");
+            faults.Add($"{SettingOf(nameof(ServerConfig.MaxFileBytes))} must be between 1024 and 536870912, not {config.MaxFileBytes}");
 
         if (config.MemoryMinutes is < 0 or > 120)
-            faults.Add($"MemoryMinutes must be between 0 and 120, not {config.MemoryMinutes}");
+            faults.Add($"{SettingOf(nameof(ServerConfig.MemoryMinutes))} must be between 0 and 120, not {config.MemoryMinutes}");
 
         if (config.MemoryDocuments is < 1 or > 128)
-            faults.Add($"MemoryDocuments must be between 1 and 128, not {config.MemoryDocuments}");
+            faults.Add($"{SettingOf(nameof(ServerConfig.MemoryDocuments))} must be between 1 and 128, not {config.MemoryDocuments}");
 
-        if (config.Roots.FirstOrDefault(root => !string.IsNullOrWhiteSpace(root) && !Path.IsPathRooted(root.Trim())) is { } relative)
-            faults.Add($"Roots must be absolute paths, and '{relative}' is not");
+        var relative = Array.FindIndex(config.Roots, root => !string.IsNullOrWhiteSpace(root) && !Path.IsPathRooted(root.Trim()));
+
+        if (relative >= 0)
+            faults.Add($"{SettingOf($"{nameof(ServerConfig.Roots)}:{relative}")} must be an absolute path, and '{config.Roots[relative]}' is not");
 
         if (faults.Count > 0)
-            throw new InvalidOperationException($"invalid configuration: {string.Join("; ", faults)}");
+            throw new StartRefusedException($"invalid configuration: {string.Join("; ", faults)}");
     }
+
+    /// <summary><c>SNAIL_MCP_DOCUMENTS_MAX_FILE_BYTES (or MaxFileBytes in the settings file)</c> for <c>MaxFileBytes</c>.</summary>
+    private static string SettingOf(string key) => ServerSettings.NameOfSetting(Name, key);
 }

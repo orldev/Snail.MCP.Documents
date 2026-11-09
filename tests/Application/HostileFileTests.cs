@@ -75,7 +75,7 @@ public sealed class HostileFileTests : IDisposable
 
         var answer = await reading.Documents.ReadAsync("deep.docx", 0, null, Limits.DefaultCharacters);
 
-        Assert.Equal($"{new string(' ', ReadingLimits.MostListDepth * 2)}1. item", answer.Data!["text"]!.GetValue<string>());
+        Assert.Equal($"{new string(' ', ReadingLimits.MostListDepth * 2)}1. item", answer.Value!["text"]!.GetValue<string>());
     }
 
     /// <summary>A valid package around a broken part fails only when the part is first read, as an <c>XmlException</c>; it is still a damaged file.</summary>
@@ -97,7 +97,7 @@ public sealed class HostileFileTests : IDisposable
         _copy.Write("sheets.xlsx", Workbook(2_000));
         using var reading = new Reading(_copy.Root);
 
-        var outline = (await reading.Outline.OutlineAsync("sheets.xlsx")).Data!;
+        var outline = (await reading.Outline.OutlineAsync("sheets.xlsx")).Value!;
 
         Assert.InRange(outline.ToJsonString().Length, 0, Limits.MostCharacters);
     }

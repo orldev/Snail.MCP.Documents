@@ -2,6 +2,8 @@ using Microsoft.Extensions.Time.Testing;
 using Snail.MCP.Documents.Adapters;
 using Snail.MCP.Documents.Application;
 using Snail.MCP.Documents.Configuration;
+using Snail.Sdk.Mcp.Hosting.Sessions;
+using Snail.Sdk.Mcp.Testing;
 
 namespace Snail.MCP.Documents.Tests.Application;
 
@@ -21,7 +23,7 @@ public sealed class DocumentOpeningTests : IDisposable
         _copy.Write("busy.slow", "x");
         var config = new ServerConfig { Roots = [_copy.Root] };
         var disk = new LocalDisk();
-        var opening = new DocumentOpening(new SessionRoots(config, new StdioAddress(), disk), new DocumentReader([new EndlessReader()], _clock), new DocumentMemory(config, _clock), config, disk, _clock);
+        var opening = new DocumentOpening(new SessionRoots(new FixedAddress(), config.Roots), new DocumentReader([new EndlessReader()], _clock), new DocumentMemory(config, _clock), config, disk, _clock);
 
         var opened = opening.OpenAsync("busy.slow");
 
@@ -45,7 +47,7 @@ public sealed class DocumentOpeningTests : IDisposable
         var reader = new SlowReader();
         var config = new ServerConfig { Roots = [_copy.Root] };
         var disk = new LocalDisk();
-        var opening = new DocumentOpening(new SessionRoots(config, new StdioAddress(), disk), new DocumentReader([reader]), new DocumentMemory(config, TimeProvider.System), config, disk, TimeProvider.System);
+        var opening = new DocumentOpening(new SessionRoots(new FixedAddress(), config.Roots), new DocumentReader([reader]), new DocumentMemory(config, TimeProvider.System), config, disk, TimeProvider.System);
 
         await Task.WhenAll(Enumerable.Range(0, 16).Select(_ => Task.Run(() => opening.OpenAsync("report.slow"))));
 

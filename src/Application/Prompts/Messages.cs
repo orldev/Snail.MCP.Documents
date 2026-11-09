@@ -70,13 +70,6 @@ public static class Messages
     public static string OutOfRange(string name, int value, int least, int most) =>
         $"{name} must be between {least} and {most}, not {value}";
 
-    /// <summary>A call that failed inside the server for a reason nobody foresaw.</summary>
-    public static string Failed(string tool, string kind, string why) =>
-        $"{tool} failed inside the server ({kind}): {why}";
-
-    /// <summary>What to do about a failure inside the server.</summary>
-    public const string FailedHint = "This is a fault of the server, not of the call: other documents still read. Do not repeat this call; report the file instead.";
-
     /// <summary>What to do when the outline is the better first step.</summary>
     public const string OutlineHint = "Call documents_outline to see the parts and tables there are.";
 }

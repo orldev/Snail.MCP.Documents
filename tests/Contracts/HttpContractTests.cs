@@ -1,5 +1,6 @@
 using Snail.MCP.Documents.Tools.Prompts;
 using Snail.Sdk.Mcp.Hosting;
+using Snail.Sdk.Mcp.Hosting.Sessions;
 using Snail.Sdk.Mcp.Testing;
 
 namespace Snail.MCP.Documents.Tests.Contracts;
@@ -20,8 +21,8 @@ public sealed class HttpContractTests : IDisposable
     [Fact]
     public async Task Server_AtAnAddress_AnnouncesItselfAndListsExactlyTheToolsTheAssemblyDeclares()
     {
-        await using var server = await ListeningServer.StartAsync(("PORT", "0"));
-        await using var client = await server.ConnectAsync($"?root={_copy.Root}");
+        await using var server = await Served.StartAsync(("ROOTS__0", Path.GetTempPath()));
+        await using var client = await server.SessionAsync($"root={_copy.Root}");
 
         var listed = await client.ListToolsAsync();
 
@@ -31,17 +32,29 @@ public sealed class HttpContractTests : IDisposable
         Assert.Equal(Catalog.Names, [.. listed.Select(tool => tool.Name).Order(StringComparer.Ordinal)]);
     }
 
+    /// <summary>The guard rules of every Snail server, on the list a session at an address receives.</summary>
+    [Fact]
+    public async Task Tools_OverHttp_KeepTheGuardRules()
+    {
+        await using var server = await Served.StartAsync(("ROOTS__0", Path.GetTempPath()));
+        await using var client = await server.SessionAsync($"root={_copy.Root}");
+
+        var listed = await client.ListToolsAsync();
+
+        Assert.Empty(ToolGuards.Problems(listed.Select(tool => tool.ProtocolTool)));
+    }
+
     [Fact]
     public async Task Read_InASessionNamingItsCopy_ReadsTheCopysAttachment()
     {
         _copy.Write(".swarm/attachments/report.docx", Samples.Word());
-        await using var server = await ListeningServer.StartAsync(("PORT", "0"));
-        await using var client = await server.ConnectAsync($"?root={_copy.Root}");
+        await using var server = await Served.StartAsync(("ROOTS__0", Path.GetTempPath()));
+        await using var client = await server.SessionAsync($"root={_copy.Root}");
 
         var answer = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = ".swarm/attachments/report.docx" });
 
-        Assert.NotEqual(true, answer.IsError);
-        Assert.StartsWith("# Отчёт за неделю", answer.Data()["text"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.True(answer.IsOk(), answer.Text());
+        Assert.StartsWith("# Отчёт за неделю", answer.Data()!["text"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     /// <summary>One server serves every task of the machine: a session reaches its own copy and nobody else's.</summary>
@@ -49,26 +62,31 @@ public sealed class HttpContractTests : IDisposable
     public async Task Read_OfAnotherTasksCopy_IsRefusedAsAToolError()
     {
         string secret = _other.Write("secret.txt", "чужое");
-        await using var server = await ListeningServer.StartAsync(("PORT", "0"), ("ROOTS__0", Path.GetTempPath()));
-        await using var client = await server.ConnectAsync($"?root={_copy.Root}");
+        await using var server = await Served.StartAsync(("ROOTS__0", Path.GetTempPath()));
+        await using var client = await server.SessionAsync($"root={_copy.Root}");
 
         var refused = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = secret });
 
         Assert.Equal(true, refused.IsError);
-        Assert.Contains("outside this session", refused.Text(), StringComparison.Ordinal);
+        Assert.Contains("outside this request", refused.Error(), StringComparison.Ordinal);
+        Assert.Equal(Reached.Outside, refused.Type());
     }
 
+    /// <summary>A role given some of the tools sees those alone: a tool left out of the address is not listed, and a call to it is refused.</summary>
     [Fact]
-    public async Task Call_ToAToolTheSessionWasNotGranted_IsRefusedAtTheDoor()
+    public async Task Call_ToAToolTheSessionWasNotGranted_IsHiddenAndRefusedAtTheDoor()
     {
         _copy.Write("a.txt", "x");
-        await using var server = await ListeningServer.StartAsync(("PORT", "0"));
-        await using var client = await server.ConnectAsync($"?root={_copy.Root}&tool=documents_outline");
+        await using var server = await Served.StartAsync(("ROOTS__0", Path.GetTempPath()));
+        await using var client = await server.SessionAsync($"root={_copy.Root}&tool=documents_outline");
 
+        var listed = await client.ListToolsAsync();
         var refused = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "a.txt" });
 
+        Assert.Equal(["documents_outline"], listed.Select(tool => tool.Name));
         Assert.Equal(true, refused.IsError);
-        Assert.Contains("was not granted", refused.Text(), StringComparison.Ordinal);
+        Assert.Contains("'documents_read' was not granted", refused.Error(), StringComparison.Ordinal);
+        Assert.NotNull(refused.Hint());
     }
 
     /// <summary>A failure nobody foresaw names itself; the protocol's own «an error occurred» tells the model nothing to act on.</summary>
@@ -76,13 +94,15 @@ public sealed class HttpContractTests : IDisposable
     public async Task Call_WithAnArgumentOfTheWrongType_IsAnsweredWithWhatFailed()
     {
         _copy.Write("a.txt", "x");
-        await using var server = await ListeningServer.StartAsync(("PORT", "0"));
-        await using var client = await server.ConnectAsync($"?root={_copy.Root}");
+        await using var server = await Served.StartAsync(("ROOTS__0", Path.GetTempPath()));
+        await using var client = await server.SessionAsync($"root={_copy.Root}");
 
         var answer = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "a.txt", ["from"] = "the start" });
 
         Assert.Equal(true, answer.IsError);
-        Assert.StartsWith("documents_read failed inside the server", JsonNode.Parse(answer.Text())!["error"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.False(answer.IsOk());
+        Assert.DoesNotContain("An error occurred", answer.Error(), StringComparison.Ordinal);
+        Assert.NotNull(answer.Hint());
     }
 
     /// <summary>The text is paid for once: a structured copy beside it would hand a model every piece twice.</summary>
@@ -90,8 +110,8 @@ public sealed class HttpContractTests : IDisposable
     public async Task Answer_OfAnyTool_CarriesItsPayloadOnce()
     {
         _copy.Write("a.txt", "x");
-        await using var server = await ListeningServer.StartAsync(("PORT", "0"));
-        await using var client = await server.ConnectAsync($"?root={_copy.Root}");
+        await using var server = await Served.StartAsync(("ROOTS__0", Path.GetTempPath()));
+        await using var client = await server.SessionAsync($"root={_copy.Root}");
 
         var answer = await client.CallToolAsync("documents_outline", new Dictionary<string, object?> { ["path"] = "a.txt" });
 

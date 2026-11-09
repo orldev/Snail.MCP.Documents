@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Snail.MCP.Documents.Configuration;
@@ -11,52 +10,62 @@ namespace Snail.MCP.Documents.Extensions;
 /// <summary>The server as a running host: listening at an address when it was given a port, a child process otherwise.</summary>
 public static class McpServerHost
 {
-    /// <summary>The path a session is opened at, and the one the platform writes into its registry.</summary>
-    public const string Path = "/mcp";
-
-    /// <summary>The path that says the server is alive.</summary>
-    public const string HealthPath = "/healthz";
+    /// <summary>Where HTTP listens when <c>Transport</c> says Http and neither <c>Url</c> nor <c>Port</c> names another: the image's port, on loopback.</summary>
+    private static readonly Uri DefaultUrl = new("http://127.0.0.1:8823/");
 
     /// <summary>Builds whichever of the two shapes the configuration asks for.</summary>
     public static IHost Of(string[] args)
     {
         var settings = ServerConfigExtensions.Settings();
         var config = ServerConfigExtensions.Read(settings);
+        var endpoint = Endpoint(settings);
 
-        return config.Port > 0 ? Listening(args, config, settings) : Spoken(args, config, settings);
+        return endpoint.Transport is McpTransport.Http ? Listening(args, endpoint, settings, config) : Spoken(args, settings, config);
     }
 
-    /// <summary>The server answering sessions at <see cref="ServerConfig.Port"/>; a port of zero takes any free one.</summary>
+    /// <summary>Where the settings say the server answers: a <c>Port</c> means HTTP on it, nothing means stdio.</summary>
     /// <remarks>
-    /// Bound on every interface because the callers are the workers of the machine, each in its own container:
-    /// a server on loopback would be reachable from nothing but itself. There is no token for the same reason
-    /// there is no published port — the platform hands a server at an address no secret, so the network the
-    /// container stands in, and the root each session names inside the configured volume, are the whole of its access
-    /// control. The endpoint is mapped as Snail.Sdk.Mcp.Http maps it, behind the refusal of every request a browser makes:
-    /// a page open on the machine, or a name rebound to it, would otherwise reach a reader of files with no token.
+    /// Inside a container — the image — on every interface, since the callers are the workers of the machine, each in a
+    /// container of its own, and a published port does not reach a container's loopback. Anywhere else on loopback alone
+    /// (<see cref="McpReach.LoopbackOrContainer"/>): there is no token, so the network is the whole of the access control,
+    /// and an address beyond loopback is refused at start rather than opened. The keys are read from the
+    /// <see cref="ServerConfig.SectionName"/> section of the settings file as well as from its root, as the rest of the
+    /// server's settings are, and a refusal names the server's variable even where the entry assembly is not the server's.
     /// </remarks>
-    internal static WebApplication Listening(string[] args, ServerConfig config, IConfiguration settings)
-    {
-        var builder = WebApplication.CreateSlimBuilder(args);
+    internal static McpEndpoint Endpoint(IConfiguration settings) =>
+        McpEndpoint.Read(settings, DefaultUrl, new McpEndpointOptions { FallbackSection = ServerConfig.SectionName, Reach = McpReach.LoopbackOrContainer, Server = ServerConfigExtensions.Name });
 
-        builder.Configuration.AddConfiguration(settings);
-        builder.ConfigureMcpServerAtAnAddress(config, settings);
+    /// <summary>The server answering sessions at the endpoint's address.</summary>
+    /// <remarks>
+    /// There is no token: the network the server stands in, and the root each session names inside the configured volume,
+    /// are the whole of its access control. A session naming a root this machine does not have or the volume does not hold
+    /// is turned away before it exists, and every request a browser makes is refused: a page open on the machine, or a name
+    /// rebound to it, would otherwise reach a reader of files with no token.
+    /// <para>
+    /// The host is built over the settings already read, so they are read once and the log levels they name are the
+    /// host's; Kestrel is given the endpoint's address directly.
+    /// </para>
+    /// </remarks>
+    private static WebApplication Listening(string[] args, McpEndpoint endpoint, IConfiguration settings, ServerConfig config)
+    {
+        var builder = McpHttpHost.CreateBuilder(args, endpoint, settings);
+
+        builder.ConfigureMcpServerAtAnAddress(config);
 
         var app = builder.Build();
 
-        app.Urls.Add($"http://*:{config.Port}");
-        app.MapGet(HealthPath, () => Results.Ok());
-        app.RefuseASessionItCannotServe();
-        app.MapLocalMcp(Path);
+        app.UseSessionRoots(TransportRegistrationExtensions.Volumes);
+        app.MapLocalMcp();
+        app.MapHealth();
 
         return app;
     }
 
-    private static IHost Spoken(string[] args, ServerConfig config, IConfiguration settings)
+    private static IHost Spoken(string[] args, IConfiguration settings, ServerConfig config)
     {
-        var builder = McpHost.CreateBuilder(args);
+        var builder = McpHost.CreateBuilder(args, settings);
 
-        builder.ConfigureMcpServerAsAProgram(config, settings);
+        builder.ConfigureMcpServerAsAProgram(config);
 
         return builder.Build();
     }

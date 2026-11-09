@@ -1,5 +1,6 @@
 using Snail.MCP.Documents.Application.Prompts;
 using Snail.MCP.Documents.Configuration;
+using Snail.Sdk.Mcp.Hosting.Sessions;
 
 namespace Snail.MCP.Documents.Application;
 
@@ -7,11 +8,16 @@ namespace Snail.MCP.Documents.Application;
 public sealed class DocumentOpening(SessionRoots roots, DocumentReader reader, DocumentMemory memory, ServerConfig config, IDisk disk, TimeProvider clock)
 {
     /// <summary>The document at <paramref name="path"/>, or why it cannot be read.</summary>
+    /// <remarks>
+    /// The session reaches the path with every link on it followed and a file there (<see cref="SessionRoots.Reach"/> with
+    /// <see cref="PathKind.File"/>): a missing file inside the copy is told as missing and a folder as not a file, not as
+    /// outside, and the refusal keeps its kind.
+    /// </remarks>
     public async Task<Opened> OpenAsync(string? path, CancellationToken cancellationToken = default)
     {
-        var reached = roots.Reach(path);
+        var reached = roots.Reach(path, PathKind.File);
         if (!reached.IsAllowed)
-            return Opened.Refused(reached.Error!, reached.Hint);
+            return Opened.Refused(reached.Refusal!, reached.Hint, reached.Type);
 
         try
         {

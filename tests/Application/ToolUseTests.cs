@@ -17,9 +17,9 @@ public sealed class ToolUseTests : IDisposable
         _copy.Write("notes.txt", whole);
         using var reading = new Reading(_copy.Root);
 
-        var first = (await reading.Documents.ReadAsync("notes.txt", 0, null, 1_000)).Data!;
+        var first = (await reading.Documents.ReadAsync("notes.txt", 0, null, 1_000)).Value!;
         int next = first["next"]!.GetValue<int>();
-        var second = (await reading.Documents.ReadAsync("notes.txt", next, null, Limits.MostCharacters)).Data!;
+        var second = (await reading.Documents.ReadAsync("notes.txt", next, null, Limits.MostCharacters)).Value!;
 
         Assert.Equal(whole, $"{first["text"]}{second["text"]}");
         Assert.Null(second["next"]);
@@ -32,7 +32,7 @@ public sealed class ToolUseTests : IDisposable
         _copy.Write("invoices.xls", Samples.OldExcel());
         using var reading = new Reading(_copy.Root);
 
-        string text = (await reading.Documents.ReadAsync("invoices.xls", 0, null, Limits.DefaultCharacters)).Data!["text"]!.GetValue<string>();
+        string text = (await reading.Documents.ReadAsync("invoices.xls", 0, null, Limits.DefaultCharacters)).Value!["text"]!.GetValue<string>();
 
         Assert.Contains("|  | B | C | D |", text, StringComparison.Ordinal);
         Assert.Contains("| 5 | INV-8 |  | 42 |", text, StringComparison.Ordinal);
@@ -56,7 +56,7 @@ public sealed class ToolUseTests : IDisposable
         _copy.Write("book.xlsx", Samples.Excel());
         using var reading = new Reading(_copy.Root);
 
-        var piece = (await reading.Documents.ReadAsync("book.xlsx", 0, 2, Limits.DefaultCharacters)).Data!;
+        var piece = (await reading.Documents.ReadAsync("book.xlsx", 0, 2, Limits.DefaultCharacters)).Value!;
 
         Assert.StartsWith("## Sheet 2: Пусто", piece["text"]!.GetValue<string>(), StringComparison.Ordinal);
         Assert.Equal("Пусто", piece["parts"]![0]!["title"]!.GetValue<string>());
@@ -68,7 +68,7 @@ public sealed class ToolUseTests : IDisposable
         _copy.Write("scan.pdf", Samples.Pdf());
         using var reading = new Reading(_copy.Root);
 
-        var piece = (await reading.Documents.ReadAsync("scan.pdf", 0, null, Limits.DefaultCharacters)).Data!;
+        var piece = (await reading.Documents.ReadAsync("scan.pdf", 0, null, Limits.DefaultCharacters)).Value!;
 
         Assert.Equal([2], piece["scans"]!.AsArray().Select(page => page!.GetValue<int>()));
     }
@@ -127,9 +127,9 @@ public sealed class ToolUseTests : IDisposable
         _copy.Write("emoji.txt", whole);
         using var reading = new Reading(_copy.Root);
 
-        var first = (await reading.Documents.ReadAsync("emoji.txt", 0, null, Limits.FewestCharacters)).Data!;
+        var first = (await reading.Documents.ReadAsync("emoji.txt", 0, null, Limits.FewestCharacters)).Value!;
         int next = first["next"]!.GetValue<int>();
-        var second = (await reading.Documents.ReadAsync("emoji.txt", next, null, Limits.FewestCharacters)).Data!;
+        var second = (await reading.Documents.ReadAsync("emoji.txt", next, null, Limits.FewestCharacters)).Value!;
 
         Assert.Equal(Limits.FewestCharacters - 1, next);
         Assert.StartsWith("😀", second["text"]!.GetValue<string>(), StringComparison.Ordinal);
@@ -177,7 +177,7 @@ public sealed class ToolUseTests : IDisposable
         _copy.Write("book.xlsx", Samples.Excel());
         using var reading = new Reading(_copy.Root);
 
-        var outline = (await reading.Outline.OutlineAsync("book.xlsx")).Data!;
+        var outline = (await reading.Outline.OutlineAsync("book.xlsx")).Value!;
 
         Assert.Equal("Excel", outline["kind"]!.GetValue<string>());
         Assert.Equal(["Выручка", "Пусто"], outline["parts"]!.AsArray().Select(part => part!["title"]!.GetValue<string>()));
@@ -192,7 +192,7 @@ public sealed class ToolUseTests : IDisposable
         _copy.Write("data.csv", "a,b\n" + string.Join('\n', Enumerable.Range(1, 30).Select(row => $"{row},{row * 2}")));
         using var reading = new Reading(_copy.Root);
 
-        var page = (await reading.Tables.ReadAsync("data.csv", 1, 11, 10)).Data!;
+        var page = (await reading.Tables.ReadAsync("data.csv", 1, 11, 10)).Value!;
 
         Assert.Equal(["a", "b"], page["header"]!.AsArray().Select(cell => cell!.GetValue<string>()));
         Assert.Equal(["11", "22"], page["cells"]![0]!.AsArray().Select(cell => cell!.GetValue<string>()));
@@ -255,7 +255,7 @@ public sealed class ToolUseTests : IDisposable
         await reading.Documents.ReadAsync("a.txt", 0, null, Limits.DefaultCharacters);
 
         File.WriteAllText(file, "вторая версия, длиннее");
-        var piece = (await reading.Documents.ReadAsync("a.txt", 0, null, Limits.DefaultCharacters)).Data!;
+        var piece = (await reading.Documents.ReadAsync("a.txt", 0, null, Limits.DefaultCharacters)).Value!;
 
         Assert.Equal("вторая версия, длиннее", piece["text"]!.GetValue<string>());
     }

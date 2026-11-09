@@ -1,8 +1,6 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Snail.MCP.Documents.Configuration;
-using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Documents.Extensions;
 
@@ -12,24 +10,22 @@ public static class McpServerRegistrationExtensions
     extension(IHostApplicationBuilder builder)
     {
         /// <summary>Configures the server to answer sessions at an address.</summary>
-        public IHostApplicationBuilder ConfigureMcpServerAtAnAddress(ServerConfig config, IConfiguration settings)
+        public IHostApplicationBuilder ConfigureMcpServerAtAnAddress(ServerConfig config)
         {
             builder.Services
                 .AddSingleton(config)
-                .AddReading(settings)
+                .AddReading()
                 .AddMcpTransportAtAnAddress();
 
             return builder;
         }
 
         /// <summary>Configures the server to speak stdio to the process that started it.</summary>
-        public IHostApplicationBuilder ConfigureMcpServerAsAProgram(ServerConfig config, IConfiguration settings)
+        public IHostApplicationBuilder ConfigureMcpServerAsAProgram(ServerConfig config)
         {
-            builder.Logging.UseStderr();
-
             builder.Services
                 .AddSingleton(config)
-                .AddReading(settings)
+                .AddReading()
                 .AddMcpTransportAsAProgram();
 
             return builder;

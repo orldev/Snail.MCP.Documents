@@ -43,12 +43,11 @@ WORKDIR /app
 COPY --from=build /app .
 
 # The volume is the server's root: a session names one copy inside it and is turned away at the door when it names
-# anything else. Every request at Information buries what matters in a container's log; the server's own warnings stay.
+# anything else. The log level is the operator's to turn (Logging__LogLevel__…, honoured by the host); the MCP SDK and
+# ASP.NET Core write from warnings up without a line here, since Snail.Sdk keeps every request out of the log by default.
 ENV SNAIL_MCP_DOCUMENTS_PORT=8823 \
     SNAIL_MCP_DOCUMENTS_ROOTS__0=/workspaces \
-    Logging__LogLevel__Default=Information \
-    Logging__LogLevel__Microsoft.AspNetCore=Warning \
-    Logging__LogLevel__ModelContextProtocol=Warning
+    Logging__LogLevel__Default=Information
 
 EXPOSE 8823
 USER app

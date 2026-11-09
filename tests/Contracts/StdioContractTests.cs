@@ -1,5 +1,6 @@
 using ModelContextProtocol.Client;
 using Snail.MCP.Documents.Tools.Prompts;
+using Snail.Sdk.Mcp.Hosting.Sessions;
 using Snail.Sdk.Mcp.Testing;
 
 namespace Snail.MCP.Documents.Tests.Contracts;
@@ -51,7 +52,7 @@ public sealed class StdioContractTests : IDisposable
         var answer = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "a.md" });
 
         Assert.True(answer.IsError != true, answer.Text());
-        Assert.Equal("# Заголовок\n\nтекст", answer.Data()["text"]!.GetValue<string>());
+        Assert.Equal("# Заголовок\n\nтекст", answer.Data()!["text"]!.GetValue<string>());
     }
 
     /// <summary>Every format through the program itself: a native build fails at the call that needs a type it was not given.</summary>
@@ -83,7 +84,7 @@ public sealed class StdioContractTests : IDisposable
         var read = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = name });
 
         Assert.True(read.IsError != true, read.Text());
-        Assert.False(string.IsNullOrWhiteSpace(read.Data()["text"]?.GetValue<string>()), name);
+        Assert.False(string.IsNullOrWhiteSpace(read.Data()!["text"]?.GetValue<string>()), name);
     }
 
     /// <summary>
@@ -103,7 +104,22 @@ public sealed class StdioContractTests : IDisposable
         Assert.NotEmpty(listed);
     }
 
-    private Task<McpClient> StartedAsync()
+    /// <summary>A program configured with no root reads nothing, and the caller is told which variable gives it one.</summary>
+    [Fact]
+    public async Task Read_AsAProgramGivenNoRoot_NamesTheVariableThatGivesOne()
+    {
+        await using var client = await StartedAsync([]);
+
+        var answer = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "a.md" });
+
+        Assert.True(answer.IsError);
+        Assert.Equal(Reached.NoRoot, answer.Type());
+        Assert.Contains("set SNAIL_MCP_DOCUMENTS_ROOTS__0", answer.Hint(), StringComparison.Ordinal);
+    }
+
+    private Task<McpClient> StartedAsync() => StartedAsync([("ROOTS__0", _copy.Root)]);
+
+    private static Task<McpClient> StartedAsync((string Name, string Value)[] own)
     {
         var (command, arguments) = ServerProgram.Command("Snail.MCP.Documents", "SNAIL_DOCUMENTS_SERVER");
 
@@ -111,7 +127,7 @@ public sealed class StdioContractTests : IDisposable
         {
             Command = command,
             Arguments = arguments,
-            EnvironmentVariables = Deployment.Variables(("ROOTS__0", _copy.Root), ("CONFIG", ServerProgram.NoSettingsFile)).ToDictionary(variable => variable.Key, variable => (string?)variable.Value)
+            EnvironmentVariables = Deployment.Variables([.. own, ("CONFIG", ServerProgram.NoSettingsFile)]).ToDictionary(variable => variable.Key, variable => (string?)variable.Value)
         }));
     }
 }

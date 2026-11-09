@@ -5,20 +5,13 @@ namespace Snail.MCP.Documents.Configuration;
 /// The roots are the whole security model: a reader of files is one call away from every file its process
 /// can open, so it refuses every path that is not inside one of them. A session states its own root in the
 /// address it opens — that is what lets one server stand behind every worker of a machine — and these stand
-/// when it states none, which is how a server started as a program for one caller is confined.
+/// when it states none, which is how a server started as a program for one caller is confined. Where the server answers
+/// — <c>Port</c>, <c>Transport</c>, <c>Url</c> — is read from the same settings by <c>McpEndpoint</c> of Snail.Sdk.Mcp.Hosting.
 /// </remarks>
 public sealed class ServerConfig
 {
     /// <summary>The section a settings file may nest these under.</summary>
     public const string SectionName = "Snail";
-
-    /// <summary>Port to answer on; none means the server is started as a program and speaks stdio.</summary>
-    /// <remarks>
-    /// One knob decides the whole shape of the process, because the two shapes serve different callers:
-    /// at an address it stands behind every worker of a machine and each session names its own copy, as a
-    /// program it belongs to one caller and is confined by <see cref="Roots"/>.
-    /// </remarks>
-    public int Port { get; set; }
 
     /// <summary>Absolute paths the agent may read documents from; nothing outside them is reachable.</summary>
     public string[] Roots { get; set; } = [];

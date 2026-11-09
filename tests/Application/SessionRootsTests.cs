@@ -1,9 +1,12 @@
-using Snail.MCP.Documents.Adapters;
-using Snail.MCP.Documents.Application;
-using Snail.MCP.Documents.Configuration;
+using Snail.MCP.Documents.Domain;
+using Snail.Sdk.Mcp.Hosting.Sessions;
 
 namespace Snail.MCP.Documents.Tests.Application;
 
+/// <summary>
+/// What this server asks of the roots of a session, which Snail.Sdk.Mcp.Hosting keeps: a path the session reaches is a
+/// file to read (<see cref="PathKind.File"/>), and one that is not is told apart from one outside the copy, its kind kept.
+/// </summary>
 public sealed class SessionRootsTests : IDisposable
 {
     private readonly Folder _copy = new();
@@ -17,68 +20,72 @@ public sealed class SessionRootsTests : IDisposable
     }
 
     [Fact]
-    public void Reach_AFileOfTheCopy_IsReadAtItsFullPath()
+    public async Task Read_AFileThatIsNotThere_SaysSoRatherThanThatItIsOutside()
     {
-        _copy.Write(".swarm/attachments/report.docx", "the report");
+        using var reading = new Reading(_copy.Root);
 
-        var reached = Roots().Reach(".swarm/attachments/report.docx");
+        var refused = await reading.Documents.ReadAsync("missing.pdf", 0, null, Limits.DefaultCharacters);
 
-        Assert.True(reached.IsAllowed);
-        Assert.Equal("the report", File.ReadAllText(reached.Path!));
+        Assert.Equal("there is no file 'missing.pdf'", refused.Error);
+        Assert.Equal("check the name and the folder it is in", refused.Hint);
+        Assert.Equal(Reached.Absent, refused.Type);
+    }
+
+    /// <summary>
+    /// A file in a folder this server may not enter is there: telling the model there is no such file sends it looking
+    /// for another name, where what it needs to hear is that the server may not read it.
+    /// </summary>
+    [Fact]
+    public async Task Read_AFileInAFolderThisServerMayNotEnter_IsUnreadableRatherThanMissing()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        _copy.Write("locked/report.txt", "x");
+        string folder = Path.Combine(_copy.Root, "locked");
+        File.SetUnixFileMode(folder, UnixFileMode.None);
+
+        try
+        {
+            using var reading = new Reading(_copy.Root);
+
+            var refused = await reading.Documents.ReadAsync("locked/report.txt", 0, null, Limits.DefaultCharacters);
+
+            Assert.False(refused.IsSuccess);
+            Assert.Equal(Reached.Unreadable, refused.Type);
+            Assert.NotNull(refused.Hint);
+        }
+        finally
+        {
+            File.SetUnixFileMode(folder, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
     }
 
     [Fact]
-    public void Reach_APathClimbingOutOfTheCopy_IsRefused()
+    public async Task Read_AFolderOfTheCopy_AsksForAFileInsideIt()
     {
-        _elsewhere.Write("secret.txt", "x");
+        _copy.Write(".swarm/attachments/report.txt", "x");
+        using var reading = new Reading(_copy.Root);
 
-        var reached = Roots().Reach($"../{Path.GetFileName(_elsewhere.Root)}/secret.txt");
+        var refused = await reading.Documents.ReadAsync(".swarm/attachments", 0, null, Limits.DefaultCharacters);
 
-        Assert.False(reached.IsAllowed);
-        Assert.Contains("outside this session", reached.Error, StringComparison.Ordinal);
+        Assert.Equal("'.swarm/attachments' is not a file", refused.Error);
+        Assert.Equal("that is a folder: name a file inside it", refused.Hint);
+        Assert.Equal(Reached.NotAFile, refused.Type);
     }
 
-    /// <summary>A link in the middle of a path resolves to itself under ResolveLinkTarget, and walks straight out of the root.</summary>
+    /// <summary>A link in the middle of a path walks out of the copy; the file it leads to is not read, whatever it holds.</summary>
     [Fact]
-    public void Reach_AFileThroughALinkLeadingOutOfTheCopy_IsRefused()
+    public async Task Read_AFileThroughALinkLeadingOutOfTheCopy_IsRefusedAsOutside()
     {
         _elsewhere.Write("secret.txt", "x");
         Directory.CreateSymbolicLink(Path.Combine(_copy.Root, "out"), _elsewhere.Root);
+        using var reading = new Reading(_copy.Root);
 
-        var reached = Roots().Reach("out/secret.txt");
+        var refused = await reading.Documents.ReadAsync("out/secret.txt", 0, null, Limits.DefaultCharacters);
 
-        Assert.False(reached.IsAllowed);
+        Assert.False(refused.IsSuccess);
+        Assert.Contains("outside this session", refused.Error, StringComparison.Ordinal);
+        Assert.Equal(Reached.Outside, refused.Type);
     }
-
-    [Fact]
-    public void Reach_AFileThatIsNotThere_SaysSoRatherThanThatItIsOutside()
-    {
-        var reached = Roots().Reach("missing.pdf");
-
-        Assert.False(reached.IsAllowed);
-        Assert.Contains("there is no file", reached.Error, StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("  ")]
-    public void Reach_NoPathAtAll_AsksForAFileAndSaysWhereFrom(string? path)
-    {
-        var reached = Roots().Reach(path);
-
-        Assert.False(reached.IsAllowed);
-        Assert.Equal("name a file", reached.Error);
-        Assert.Contains(_copy.Root, reached.Hint, StringComparison.Ordinal);
-    }
-
-    /// <summary>A server with no roots at all reads nothing, rather than the whole disk.</summary>
-    [Fact]
-    public void Reach_WithNoRootAnywhere_ReadsNothing()
-    {
-        var reached = new SessionRoots(new ServerConfig(), new StdioAddress(), new LocalDisk()).Reach("/etc/hosts");
-
-        Assert.False(reached.IsAllowed);
-    }
-
-    private SessionRoots Roots() => new(new ServerConfig { Roots = [_copy.Root] }, new StdioAddress(), new LocalDisk());
 }

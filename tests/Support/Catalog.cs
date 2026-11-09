@@ -12,7 +12,7 @@ internal static class Catalog
 {
     public static IReadOnlyList<MethodInfo> Tools { get; } =
     [
-        .. typeof(ToolResponse).Assembly.GetTypes()
+        .. typeof(DocumentTools).Assembly.GetTypes()
             .Where(type => type.GetCustomAttribute<McpServerToolTypeAttribute>() is not null)
             .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance))
             .Where(method => method.GetCustomAttribute<McpServerToolAttribute>() is not null)

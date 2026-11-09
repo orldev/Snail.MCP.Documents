@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Snail.MCP.Documents.Adapters;
 using Snail.MCP.Documents.Application;
@@ -11,13 +10,11 @@ public static class ReadingRegistrationExtensions
     extension(IServiceCollection services)
     {
         /// <summary>Everything a session needs to reach and read the documents of its copy.</summary>
-        public IServiceCollection AddReading(IConfiguration settings)
+        public IServiceCollection AddReading()
         {
-            services.AddSingleton(settings);
             services.AddSingleton(TimeProvider.System);
             services.AddSingleton<IDisk, LocalDisk>();
             services.AddSingleton<DocumentMemory>();
-            services.AddScoped<SessionRoots>();
             services.AddScoped<DocumentOpening>();
             services.AddScoped<DocumentReading>();
             services.AddScoped<DocumentOutline>();

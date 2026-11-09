@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Snail.MCP.Documents.Configuration;
-using Snail.MCP.Documents.Extensions;
+using Snail.Sdk.Mcp.Http;
 using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Documents.Tests.Contracts;
@@ -18,7 +18,7 @@ public sealed partial class RegistryManifestContractTests
 
     private static IEnumerable<JsonNode> Variables => Manifest["packages"]![0]!["environmentVariables"]!.AsArray()!;
 
-    /// <summary>A setting the code reads and the manifest never names is one no operator will find.</summary>
+    /// <summary>A setting the code reads and the manifest never names is one no operator will find; a list is named by its first item, <c>__0</c>, since a bare name binds none of it.</summary>
     [Fact]
     public void Manifest_NamesEverySettingOfTheServer_WithTheDefaultTheCodeStartsFrom()
     {
@@ -26,7 +26,7 @@ public sealed partial class RegistryManifestContractTests
 
         Assert.All(typeof(ServerConfig).GetProperties(), setting =>
         {
-            string variable = $"{ServerSettings.PrefixOf(ServerConfigExtensions.Name)}{Screaming().Replace(setting.Name, "_$1").ToUpperInvariant()}";
+            string variable = $"{ServerSettings.PrefixOf(ServerConfigExtensions.Name)}{Screaming().Replace(setting.Name, "_$1").ToUpperInvariant()}{(setting.PropertyType.IsArray ? "__0" : string.Empty)}";
             var named = Variables.SingleOrDefault(candidate => candidate["name"]!.GetValue<string>() == variable);
 
             Assert.True(named is not null, variable);
@@ -57,7 +57,7 @@ public sealed partial class RegistryManifestContractTests
         Assert.Contains($"mcp.port=\"{Entry["port"]!.GetValue<int>()}\"", dockerfile, StringComparison.Ordinal);
         Assert.Contains($"mcp.path=\"{Entry["path"]!.GetValue<string>()}\"", dockerfile, StringComparison.Ordinal);
         Assert.Contains($"SNAIL_MCP_DOCUMENTS_PORT={Entry["port"]!.GetValue<int>()}", dockerfile, StringComparison.Ordinal);
-        Assert.StartsWith(McpServerHost.Path, Entry["path"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.StartsWith(McpHttpHost.DefaultPath, Entry["path"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     /// <summary>The server reads documents and has no business writing them: the copies are mounted read-only wherever it stands.</summary>

@@ -8,7 +8,7 @@ namespace Snail.MCP.Documents.Application;
 public sealed class DocumentOutline(DocumentOpening opening)
 {
     /// <summary>The outline of the document, or why it cannot be read.</summary>
-    public async Task<Answer> OutlineAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<Answer<JsonObject>> OutlineAsync(string path, CancellationToken cancellationToken = default)
     {
         var opened = await opening.OpenAsync(path, cancellationToken);
 

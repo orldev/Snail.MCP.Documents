@@ -20,8 +20,8 @@
           "default": "0"
         },
         {
-          "name": "SNAIL_MCP_DOCUMENTS_ROOTS",
-          "description": "Folders a session that names none may read, as ROOTS__0, ROOTS__1 and so on; a session at an address names its own with ?root=, which must lie inside one of them when any is set.",
+          "name": "SNAIL_MCP_DOCUMENTS_ROOTS__0",
+          "description": "A folder a session that names none may read, the first of a list: further ones are ROOTS__1, ROOTS__2 and so on, and a bare ROOTS sets none. A session at an address names its own with ?root=, which must lie inside one of them when any is set.",
           "isRequired": false
         },
         {
@@ -61,8 +61,8 @@
           "value": "8823"
         },
         {
-          "name": "SNAIL_MCP_DOCUMENTS_ROOTS",
-          "description": "Folders a session that names none may read, as ROOTS__0, ROOTS__1 and so on; a session at an address names its own with ?root=, which must lie inside one of them when any is set.",
+          "name": "SNAIL_MCP_DOCUMENTS_ROOTS__0",
+          "description": "A folder a session that names none may read, the first of a list: further ones are ROOTS__1, ROOTS__2 and so on, and a bare ROOTS sets none. A session at an address names its own with ?root=, which must lie inside one of them when any is set.",
           "isRequired": false
         },
         {

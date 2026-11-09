@@ -8,38 +8,6 @@ public sealed class LocalDisk : IDisk
     private const int Chunk = 81_920;
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// Every link on the path, not just the last one: <c>ResolveLinkTarget</c> answers about the final component
-    /// alone, so a link in the middle — <c>/copy/out/secret.txt</c> where <c>out</c> leads elsewhere — resolves
-    /// to itself and walks straight out of the root. It is the cheapest escape there is.
-    /// </remarks>
-    public string Real(string path)
-    {
-        string existing = path;
-        Stack<string> tail = [];
-
-        while (!Directory.Exists(existing) && !File.Exists(existing))
-        {
-            string? parent = Path.GetDirectoryName(existing);
-            if (string.IsNullOrEmpty(parent) || parent == existing)
-                return path;
-
-            tail.Push(Path.GetFileName(existing));
-            existing = parent;
-        }
-
-        string resolved = Resolved(existing);
-
-        return tail.Count == 0 ? resolved : Path.Combine([resolved, .. tail]);
-    }
-
-    /// <inheritdoc/>
-    public bool IsFile(string path) => File.Exists(path);
-
-    /// <inheritdoc/>
-    public bool IsFolder(string path) => Directory.Exists(path);
-
-    /// <inheritdoc/>
     public FileStamp Stamp(string path)
     {
         var file = new FileInfo(path);
@@ -81,27 +49,4 @@ public sealed class LocalDisk : IDisk
 
         return content;
     }
-
-    /// <remarks>A root is never a link, and is not asked: Windows answers the question about <c>C:\</c> with an exception.</remarks>
-    private static string Resolved(string existing)
-    {
-        string? parent = Path.GetDirectoryName(existing);
-
-        if (string.IsNullOrEmpty(parent) || parent == existing)
-            return existing;
-
-        if (Link(existing) is { } target)
-            return Resolved(target);
-
-        string real = Resolved(parent);
-
-        return string.Equals(real, parent, StringComparison.Ordinal)
-            ? existing
-            : Path.Combine(real, Path.GetFileName(existing));
-    }
-
-    private static string? Link(string path) =>
-        (Directory.Exists(path)
-            ? new DirectoryInfo(path).ResolveLinkTarget(returnFinalTarget: true)
-            : new FileInfo(path).ResolveLinkTarget(returnFinalTarget: true))?.FullName;
 }

@@ -11,22 +11,22 @@ namespace Snail.MCP.Documents.Application;
 public sealed class TableReading(DocumentOpening opening)
 {
     /// <summary>Rows of table <paramref name="table"/> from <paramref name="fromRow"/>, or why there are none.</summary>
-    public async Task<Answer> ReadAsync(string path, int table, int fromRow, int maxRows, CancellationToken cancellationToken = default)
+    public async Task<Answer<JsonObject>> ReadAsync(string path, int table, int fromRow, int maxRows, CancellationToken cancellationToken = default)
     {
         if (Refusal(table, fromRow, maxRows) is { } refusal)
-            return Answer.Failed(refusal);
+            return Answer.Failed<JsonObject>(refusal);
 
         var opened = await opening.OpenAsync(path, cancellationToken);
         if (opened.Document is not { } document)
             return opened.Failure;
 
         if (table > document.Tables.Count)
-            return Answer.Failed(Messages.NoSuchTable(table, document.Tables.Count), Messages.OutlineHint);
+            return Answer.Failed<JsonObject>(Messages.NoSuchTable(table, document.Tables.Count), Messages.OutlineHint);
 
         var found = document.Tables[table - 1];
 
         return fromRow > 0 && fromRow >= found.Rows.Count
-            ? Answer.Failed(Messages.RowBeyondTheEnd(fromRow, found.Rows.Count))
+            ? Answer.Failed<JsonObject>(Messages.RowBeyondTheEnd(fromRow, found.Rows.Count))
             : Answer.Ok(Described(path, found, fromRow, maxRows));
     }
 

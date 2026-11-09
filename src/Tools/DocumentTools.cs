@@ -7,6 +7,10 @@ using Snail.MCP.Documents.Tools.Prompts;
 namespace Snail.MCP.Documents.Tools;
 
 /// <summary>What the documents of the copy say: an outline to find a place by, the text in pieces, a table row by row.</summary>
+/// <remarks>
+/// Every answer is the text alone (<see cref="AnswerShape.None"/>): the payload is the text of a document, and a structured
+/// copy beside it would hand a client that gives its model the whole result every piece twice.
+/// </remarks>
 [McpServerToolType]
 public sealed class DocumentTools(DocumentReading reading, DocumentOutline outline, TableReading tables)
 {
@@ -19,7 +23,7 @@ public sealed class DocumentTools(DocumentReading reading, DocumentOutline outli
         [Description(ToolDescriptions.ReadPart)] int? part = null,
         [Description(ToolDescriptions.ReadCharacters)] int maxCharacters = Limits.DefaultCharacters,
         CancellationToken cancellationToken = default) =>
-        ToolResponse.From(await reading.ReadAsync(path, from, part, maxCharacters, cancellationToken));
+        ToolAnswer.From(await reading.ReadAsync(path, from, part, maxCharacters, cancellationToken), AnswerShape.None);
 
     /// <summary>Says what a document holds without reading it.</summary>
     [McpServerTool(Name = "documents_outline", ReadOnly = true, Idempotent = true, OpenWorld = false)]
@@ -27,7 +31,7 @@ public sealed class DocumentTools(DocumentReading reading, DocumentOutline outli
     public async Task<CallToolResult> OutlineAsync(
         [Description(ToolDescriptions.OutlinePath)] string path,
         CancellationToken cancellationToken = default) =>
-        ToolResponse.From(await outline.OutlineAsync(path, cancellationToken));
+        ToolAnswer.From(await outline.OutlineAsync(path, cancellationToken), AnswerShape.None);
 
     /// <summary>Reads one table of a document as rows of cells.</summary>
     [McpServerTool(Name = "documents_table", ReadOnly = true, Idempotent = true, OpenWorld = false)]
@@ -38,5 +42,5 @@ public sealed class DocumentTools(DocumentReading reading, DocumentOutline outli
         [Description(ToolDescriptions.TableFromRow)] int fromRow = 0,
         [Description(ToolDescriptions.TableRows)] int maxRows = Limits.DefaultRows,
         CancellationToken cancellationToken = default) =>
-        ToolResponse.From(await tables.ReadAsync(path, table, fromRow, maxRows, cancellationToken));
+        ToolAnswer.From(await tables.ReadAsync(path, table, fromRow, maxRows, cancellationToken), AnswerShape.None);
 }

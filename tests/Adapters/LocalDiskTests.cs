@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Snail.MCP.Documents.Adapters;
+using Snail.Sdk.Mcp.Hosting.Sessions;
 
 namespace Snail.MCP.Documents.Tests.Adapters;
 
@@ -15,7 +16,7 @@ public sealed class LocalDiskTests : IDisposable
     {
         string file = _copy.Write("a.txt", "текст");
 
-        await using var content = await new LocalDisk().ReadAsync(new LocalDisk().Real(file), 1_024, CancellationToken.None);
+        await using var content = await new LocalDisk().ReadAsync(RealPath.Of(file)!, 1_024, CancellationToken.None);
         using var text = new StreamReader(content);
 
         Assert.Equal("текст", await text.ReadToEndAsync());
@@ -29,7 +30,7 @@ public sealed class LocalDiskTests : IDisposable
             return;
 
         string target = _copy.Write("target.txt", "x");
-        string link = Path.Combine(new LocalDisk().Real(_copy.Root), "link.txt");
+        string link = Path.Combine(RealPath.Of(_copy.Root)!, "link.txt");
         File.CreateSymbolicLink(link, target);
 
         await Assert.ThrowsAsync<IOException>(() => new LocalDisk().ReadAsync(link, 1_024, CancellationToken.None));
@@ -43,7 +44,7 @@ public sealed class LocalDiskTests : IDisposable
             return;
 
         _copy.Write("real/a.txt", "x");
-        string root = new LocalDisk().Real(_copy.Root);
+        string root = RealPath.Of(_copy.Root)!;
         Directory.CreateSymbolicLink(Path.Combine(root, "linked"), Path.Combine(root, "real"));
 
         await Assert.ThrowsAsync<IOException>(() => new LocalDisk().ReadAsync(Path.Combine(root, "linked", "a.txt"), 1_024, CancellationToken.None));
@@ -56,7 +57,7 @@ public sealed class LocalDiskTests : IDisposable
         if (OperatingSystem.IsWindows())
             return;
 
-        string pipe = Path.Combine(new LocalDisk().Real(_copy.Root), "pipe.txt");
+        string pipe = Path.Combine(RealPath.Of(_copy.Root)!, "pipe.txt");
         using (var made = Process.Start("mkfifo", pipe))
             await made.WaitForExitAsync();
 
@@ -66,20 +67,11 @@ public sealed class LocalDiskTests : IDisposable
         Assert.Contains("not a regular file", failure.Message, StringComparison.Ordinal);
     }
 
-    /// <summary>Every path ends at a root; on Windows asking <c>C:\</c> whether it is a link threw, and no file was read.</summary>
-    [Fact]
-    public void Real_TheRootOfTheDisk_IsItself()
-    {
-        string root = Path.GetPathRoot(Path.GetTempPath())!;
-
-        Assert.Equal(root, new LocalDisk().Real(root));
-    }
-
     [Fact]
     public async Task ReadAsync_AFileLargerThanItMayBe_IsRefusedAsTooLarge()
     {
         string file = _copy.Write("big.txt", new string('x', 4_096));
 
-        await Assert.ThrowsAsync<DocumentTooLargeException>(() => new LocalDisk().ReadAsync(new LocalDisk().Real(file), 1_024, CancellationToken.None));
+        await Assert.ThrowsAsync<DocumentTooLargeException>(() => new LocalDisk().ReadAsync(RealPath.Of(file)!, 1_024, CancellationToken.None));
     }
 }
