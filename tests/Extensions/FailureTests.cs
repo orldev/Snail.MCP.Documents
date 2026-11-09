@@ -4,6 +4,7 @@ using Snail.MCP.Documents.Application.Ports;
 using Snail.MCP.Documents.Configuration;
 using Snail.MCP.Documents.Domain;
 using Snail.MCP.Documents.Extensions;
+using Snail.Sdk.Mcp.Hosting;
 using Snail.Sdk.Mcp.Http;
 using Snail.Sdk.Mcp.Testing;
 
@@ -33,7 +34,7 @@ public sealed class FailureTests : IDisposable
         Assert.Equal(true, answer.IsError);
         Assert.Equal("documents_read failed inside the server (InvalidOperationException): the disk lost its place", answer.Error());
         Assert.Contains("report the file", answer.Hint(), StringComparison.Ordinal);
-        Assert.Equal("internal", answer.Type());
+        Assert.Equal(ToolFailures.Internal, answer.Type());
     }
 
     private void Configured(WebApplicationBuilder builder)

@@ -116,7 +116,7 @@ public sealed class HttpContractTests : IDisposable
         var refused = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "a.txt", ["offset"] = 1 });
 
         Assert.Equal(true, refused.IsError);
-        Assert.Equal("arguments", refused.Type());
+        Assert.Equal(ToolFailures.Arguments, refused.Type());
         Assert.Contains("'offset'", refused.Error(), StringComparison.Ordinal);
     }
 

@@ -7,10 +7,6 @@
 # So a local build is tagged local; one that should name its commit passes it, since the image sees no git:
 # --build-arg VERSION=0.0.0-local.$(git rev-parse --short HEAD).
 #
-# Until Snail.Sdk 0.5.0 is on nuget.org this image does not build: nuget.config routes Snail.Sdk to the LocalPackages
-# feed of the developer's machine, which the build stage does not have. The release puts nuget.org back as the only
-# source, and the image builds as it is.
-#
 # The volume is the point. This server reads the documents of the working copies, so it runs where the copies
 # are: they are mounted here read-only, and each session names the one it reads through its address —
 # …/mcp?root=/workspaces/<task>. A session naming a copy this container cannot see is refused at the door

@@ -1,3 +1,4 @@
+using Snail.Sdk.Mcp.Hosting;
 using Snail.Sdk.Mcp.Hosting.Sessions;
 
 namespace Snail.MCP.Documents.Application;
@@ -11,7 +12,7 @@ namespace Snail.MCP.Documents.Application;
 public static class Refusals
 {
     /// <summary>A number outside the range its parameter takes, in the word the SDK's argument check answers a parameter it could not take with.</summary>
-    public const string Arguments = "arguments";
+    public const string Arguments = ToolFailures.Arguments;
 
     /// <summary>A file that is there and could not be opened, in the word <see cref="Reached.Unreadable"/> uses for a disk that failed.</summary>
     public const string Unreadable = Reached.Unreadable;

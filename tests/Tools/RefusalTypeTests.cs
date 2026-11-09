@@ -1,6 +1,8 @@
 using ModelContextProtocol.Protocol;
 using Snail.MCP.Documents.Domain;
 using Snail.MCP.Documents.Tools;
+using Snail.Sdk.Mcp.Hosting;
+using Snail.Sdk.Mcp.Hosting.Sessions;
 using Snail.Sdk.Mcp.Testing;
 
 namespace Snail.MCP.Documents.Tests.Tools;
@@ -22,7 +24,7 @@ public sealed class RefusalTypeTests : IDisposable
 
         var answer = await WithToolsAsync(tools => tools.ReadAsync("a.txt", from, part, maxCharacters));
 
-        Assert.Equal("arguments", answer.Type());
+        Assert.Equal(ToolFailures.Arguments, answer.Type());
     }
 
     [Theory]
@@ -35,7 +37,7 @@ public sealed class RefusalTypeTests : IDisposable
 
         var answer = await WithToolsAsync(tools => tools.TableAsync("data.csv", table, fromRow, maxRows));
 
-        Assert.Equal("arguments", answer.Type());
+        Assert.Equal(ToolFailures.Arguments, answer.Type());
     }
 
     [Fact]
@@ -129,7 +131,7 @@ public sealed class RefusalTypeTests : IDisposable
 
         var answer = await WithToolsAsync(tools => tools.ReadAsync("closed.txt"));
 
-        Assert.Equal("unreadable", answer.Type());
+        Assert.Equal(Reached.Unreadable, answer.Type());
     }
 
     private async Task<CallToolResult> WithToolsAsync(Func<DocumentTools, Task<CallToolResult>> call, int maxFileBytes = 52_428_800)
