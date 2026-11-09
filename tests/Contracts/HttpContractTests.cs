@@ -68,7 +68,7 @@ public sealed class HttpContractTests : IDisposable
         var refused = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = secret });
 
         Assert.Equal(true, refused.IsError);
-        Assert.Contains("outside this request", refused.Error(), StringComparison.Ordinal);
+        Assert.Equal($"'{secret}' is outside this request's root {_copy.Root}, which its address names", refused.Error());
         Assert.Equal(Reached.Outside, refused.Type());
     }
 
@@ -103,6 +103,21 @@ public sealed class HttpContractTests : IDisposable
         Assert.False(answer.IsOk());
         Assert.DoesNotContain("An error occurred", answer.Error(), StringComparison.Ordinal);
         Assert.NotNull(answer.Hint());
+    }
+
+    /// <summary>A parameter the tool does not take is refused by name, not dropped: the piece read from the start would look like the one asked for.</summary>
+    [Fact]
+    public async Task Call_WithAParameterTheToolDoesNotTake_IsRefusedNamingIt()
+    {
+        _copy.Write("a.txt", "x");
+        await using var server = await Served.StartAsync(("ROOTS__0", Path.GetTempPath()));
+        await using var client = await server.SessionAsync($"root={_copy.Root}");
+
+        var refused = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "a.txt", ["offset"] = 1 });
+
+        Assert.Equal(true, refused.IsError);
+        Assert.Equal("arguments", refused.Type());
+        Assert.Contains("'offset'", refused.Error(), StringComparison.Ordinal);
     }
 
     /// <summary>The text is paid for once: a structured copy beside it would hand a model every piece twice.</summary>

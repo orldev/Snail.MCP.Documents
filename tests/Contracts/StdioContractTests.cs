@@ -51,7 +51,7 @@ public sealed class StdioContractTests : IDisposable
 
         var answer = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "a.md" });
 
-        Assert.True(answer.IsError != true, answer.Text());
+        Assert.True(answer.IsOk(), answer.Text());
         Assert.Equal("# Заголовок\n\nтекст", answer.Data()!["text"]!.GetValue<string>());
     }
 
@@ -83,7 +83,7 @@ public sealed class StdioContractTests : IDisposable
 
         var read = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = name });
 
-        Assert.True(read.IsError != true, read.Text());
+        Assert.True(read.IsOk(), read.Text());
         Assert.False(string.IsNullOrWhiteSpace(read.Data()!["text"]?.GetValue<string>()), name);
     }
 
@@ -100,7 +100,7 @@ public sealed class StdioContractTests : IDisposable
         var answer = await client.CallToolAsync("documents_read", new Dictionary<string, object?> { ["path"] = "deep.html" });
         var listed = await client.ListToolsAsync();
 
-        Assert.True(answer.IsError != true, answer.Text());
+        Assert.True(answer.IsOk(), answer.Text());
         Assert.NotEmpty(listed);
     }
 
@@ -119,15 +119,7 @@ public sealed class StdioContractTests : IDisposable
 
     private Task<McpClient> StartedAsync() => StartedAsync([("ROOTS__0", _copy.Root)]);
 
-    private static Task<McpClient> StartedAsync((string Name, string Value)[] own)
-    {
-        var (command, arguments) = ServerProgram.Command("Snail.MCP.Documents", "SNAIL_DOCUMENTS_SERVER");
-
-        return McpClient.CreateAsync(new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Command = command,
-            Arguments = arguments,
-            EnvironmentVariables = Deployment.Variables([.. own, ("CONFIG", ServerProgram.NoSettingsFile)]).ToDictionary(variable => variable.Key, variable => (string?)variable.Value)
-        }));
-    }
+    /// <summary>The program started as a client starts it, with a home of its own and no settings file, and these settings.</summary>
+    private static Task<McpClient> StartedAsync((string Name, string Value)[] own) =>
+        ServerProgram.StartAsync("Snail.MCP.Documents", "SNAIL_DOCUMENTS_SERVER", Deployment.Variables(own).ToDictionary(variable => variable.Key, variable => (string?)variable.Value));
 }

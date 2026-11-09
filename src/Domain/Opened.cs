@@ -10,5 +10,5 @@ public sealed record Opened(Document? Document, string? Error, string? Hint, str
     public static Opened Refused(string error, string? hint = null, string? type = null) => new(null, error, hint, type);
 
     /// <summary>The refusal as a tool answer.</summary>
-    public Answer<JsonObject> Failure => Answer.Failed<JsonObject>(Error ?? "the document could not be opened", Hint, Type);
+    public Answer<JsonObject> Failure => Answer.Failed(Error ?? "the document could not be opened", Hint, Type);
 }

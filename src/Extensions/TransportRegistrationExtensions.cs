@@ -4,6 +4,7 @@ using Snail.MCP.Documents.Configuration;
 using Snail.MCP.Documents.Tools;
 using Snail.MCP.Documents.Tools.Prompts;
 using Snail.Sdk.Mcp.Hosting;
+using Snail.Sdk.Mcp.Hosting.Discovery;
 using Snail.Sdk.Mcp.Hosting.Sessions;
 using Snail.Sdk.Mcp.Http;
 
@@ -37,8 +38,10 @@ public static class TransportRegistrationExtensions
 
         /// <remarks>
         /// The grant is held where calls arrive rather than inside each tool, and a tool the session was not granted is
-        /// left out of its list; the roots are the ones its address names inside the configured volume, and a session with
-        /// none is told which variable configures it. A failure nobody foresaw is worded by <see cref="Explained"/>.
+        /// left out of its list. A call that sends a parameter its tool does not take, or leaves out one it needs, is
+        /// refused naming it, rather than the parameter dropped without a word. The roots are the ones its address names
+        /// inside the configured volume, and a session with none is told which variable configures it. A failure nobody
+        /// foresaw is worded by <see cref="Explained"/>.
         /// </remarks>
         private IMcpServerBuilder AddMcpTools() =>
             services
@@ -49,6 +52,7 @@ public static class TransportRegistrationExtensions
                 })
                 .ExplainFailures(Explained)
                 .WithSessionGrant()
+                .WithArgumentCheck()
                 .WithSessionRoots(Volumes, roots => roots.RootsSetting = RootsSetting)
                 .WithTools<DocumentTools>();
     }
