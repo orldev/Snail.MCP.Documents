@@ -65,15 +65,17 @@ public sealed class DoorContractTests : IDisposable
     }
 
     /// <summary>A worker pointed at the server of another machine names a copy this machine does not have.</summary>
+    /// <remarks>The copy is named as this system writes an absolute path: on Windows <c>/no/such/copy</c> is a folder of the current drive.</remarks>
     [Fact]
     public async Task Session_NamingACopyThisMachineDoesNotHave_IsTurnedAwayAtTheDoor()
     {
+        string missing = Path.GetFullPath("/no/such/copy");
         await using var server = await Served.StartAsync();
 
-        var answer = await PostAsync(server, "root=/no/such/copy");
+        var answer = await PostAsync(server, $"root={Uri.EscapeDataString(missing)}");
 
         Assert.Equal(HttpStatusCode.BadRequest, answer.StatusCode);
-        Assert.Contains("this machine has no /no/such/copy", await answer.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Contains($"this machine has no {missing}", await answer.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
 
     /// <summary>
