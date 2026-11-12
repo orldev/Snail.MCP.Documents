@@ -120,7 +120,7 @@ public sealed class RefusalTypeTests : IDisposable
         Assert.Equal("locked", answer.Type());
     }
 
-    [Fact]
+    [NotAsRootFact]
     public async Task Read_FileThisProcessMayNotOpen_IsTypedUnreadable()
     {
         if (OperatingSystem.IsWindows())

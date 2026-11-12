@@ -104,7 +104,7 @@ public sealed class HostileFileTests : IDisposable
 
 
     /// <summary>A file that passes every check and then cannot be opened is answered with the reason, not with the SDK's «an error occurred».</summary>
-    [Fact]
+    [NotAsRootFact]
     public async Task Read_FileThisProcessMayNotOpen_IsRefusedWithAReason()
     {
         if (OperatingSystem.IsWindows())

@@ -35,7 +35,7 @@ public sealed class SessionRootsTests : IDisposable
     /// A file in a folder this server may not enter is there: telling the model there is no such file sends it looking
     /// for another name, where what it needs to hear is that the server may not read it.
     /// </summary>
-    [Fact]
+    [NotAsRootFact]
     public async Task Read_AFileInAFolderThisServerMayNotEnter_IsUnreadableRatherThanMissing()
     {
         if (OperatingSystem.IsWindows())

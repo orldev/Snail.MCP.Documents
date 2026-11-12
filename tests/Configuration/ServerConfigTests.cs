@@ -109,7 +109,7 @@ public sealed class ServerConfigTests
     }
 
     /// <summary>With no token the network is the access control: outside a container the server stays on loopback, and a setting that would open every interface stops the start, naming the variable that asked for it.</summary>
-    [Theory]
+    [OutsideAContainerTheory]
     [InlineData("LISTENS_ON_EVERY_INTERFACE", "true")]
     [InlineData("URL", "http://0.0.0.0:8823/")]
     [InlineData("URL", "http://192.168.1.10:8823/")]
