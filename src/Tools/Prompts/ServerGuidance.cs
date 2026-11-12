@@ -25,8 +25,9 @@ public static class ServerGuidance
 
         Every answer is JSON with an ok flag, and a failed call is also flagged isError. When ok is false, read
         error and hint and fix the call instead of retrying it verbatim; type names the failure: arguments,
-        noSuchPart, noSuchTable and pastTheEnd for a call to correct; absent, outside and notAFile for a path;
-        tooLarge, timeout, unknownFormat, damaged, locked and unreadable for a file that will not read however
-        it is asked.
+        noSuchPart, noSuchTable and pastTheEnd for a call to correct; absent, outside, notAFile and noRoot for
+        a path; tooLarge, timeout, unknownFormat, damaged, locked and unreadable for a file that will not read
+        however it is asked; notGranted for a tool this session was not given, and internal for a fault of the
+        server.
         """;
 }

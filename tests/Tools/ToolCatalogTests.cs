@@ -1,9 +1,12 @@
 using System.ComponentModel;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Snail.MCP.Documents.Application;
 using Snail.MCP.Documents.Application.Prompts;
 using Snail.MCP.Documents.Domain;
 using Snail.MCP.Documents.Tools.Prompts;
+using Snail.Sdk.Mcp.Hosting;
+using Snail.Sdk.Mcp.Hosting.Sessions;
 
 namespace Snail.MCP.Documents.Tests.Tools;
 
@@ -87,6 +90,19 @@ public sealed partial class ToolCatalogTests
     {
         Assert.Equal([Limits.MostParts, Limits.MostParts], [Limits.MostHeadings, Limits.MostTables]);
         Assert.Contains($"stops at {Limits.MostParts} entries", ToolDescriptions.Outline, StringComparison.Ordinal);
+    }
+
+    /// <summary>The instructions name the types a program branches on; a kind of refusal added to the code and left out of them is one the model meets unexplained.</summary>
+    [Fact]
+    public void Instructions_NameEveryTypeOfRefusalTheServerAnswers()
+    {
+        var own = typeof(Refusals)
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+            .Select(field => (string)field.GetRawConstantValue()!);
+        string[] types = [.. own, Reached.Absent, Reached.Outside, Reached.NotAFile, Reached.NoRoot, GrantOptions.NotGranted, ToolFailures.Internal];
+
+        Assert.All(types, type => Assert.Matches($@"\b{type}\b", ServerGuidance.Instructions));
     }
 
     [GeneratedRegex(@"\bdocuments_[a-z_]+\b", RegexOptions.CultureInvariant)]
