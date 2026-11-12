@@ -2,7 +2,7 @@
   "key": "documents",
   "name": "documents",
   "description": "the working copy's documents as Markdown: Word, Excel, PowerPoint, PDF text, HTML, CSV, JSON — in pieces, with an outline and tables row by row",
-  "image": "ghcr.io/orldev/s3l-documents-mcp:0.1.0",
+  "image": "ghcr.io/orldev/s3l-documents-mcp:0.2.0",
   "port": 8823,
   "path": "/mcp?root={workspace}",
   "args": [],

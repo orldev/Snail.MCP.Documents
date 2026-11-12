@@ -2,12 +2,12 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
   "name": "io.github.orldev/snail-mcp-documents",
   "description": "Reads Word, Excel, PowerPoint, PDF, HTML, CSV, JSON and text documents as Markdown, piece by piece.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "packages": [
     {
       "registryType": "nuget",
       "identifier": "Snail.MCP.Documents",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       },
@@ -47,7 +47,7 @@
     {
       "registryType": "nuget",
       "identifier": "Snail.MCP.Documents",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "transport": {
         "type": "streamable-http",
         "url": "http://127.0.0.1:8823/mcp"
